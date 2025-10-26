@@ -1,0 +1,133 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Brandon Text Font Family */
+@font-face {
+  font-family: 'Brandon Text';
+  src: url('/fonts/BrandonText.woff2') format('woff2'),
+       url('/fonts/BrandonText.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Brandon Text';
+  src: url('/fonts/BrandonText.woff2') format('woff2'),
+       url('/fonts/BrandonText.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Brandon Text';
+  src: url('/fonts/BrandonText.woff2') format('woff2'),
+       url('/fonts/BrandonText.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Brandon Text';
+  src: url('/fonts/BrandonText.woff2') format('woff2'),
+       url('/fonts/BrandonText.woff') format('woff');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 189 100% 28%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 199 85% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 30 67% 69%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 189 100% 28%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+@layer utilities {
+  /* Text gradients using brand colors */
+  .text-gradient-primary {
+    @apply bg-gradient-to-r from-deep to-calm bg-clip-text text-transparent;
+  }
+  
+  .text-gradient-accent {
+    @apply bg-gradient-to-r from-calm to-sand bg-clip-text text-transparent;
+  }
+  
+  /* Background gradients */
+  .bg-gradient-primary {
+    @apply bg-gradient-to-br from-deep to-calm;
+  }
+  
+  .bg-gradient-soft {
+    @apply bg-gradient-to-br from-foam to-white;
+  }
+  
+  /* Custom shadows with brand colors */
+  .shadow-brand {
+    box-shadow: 0 10px 40px -10px rgba(0, 117, 143, 0.25);
+  }
+  
+  /* Hover animations */
+  .hover-lift {
+    @apply transition-transform duration-300 hover:-translate-y-1;
+  }
+  
+  .hover-glow {
+    @apply transition-shadow duration-300 hover:shadow-lg;
+  }
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-foam;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-calm;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-deep;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #00758F #E8F0F4;
+}
