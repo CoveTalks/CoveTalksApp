@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { 
-  Camera, Edit, Save, X, Plus, Trash2, Globe, Check, 
-  Linkedin, Twitter, Award, BookOpen, Users, Star 
+  Camera, Edit, Save, X, Plus, Trash2, Globe, 
+  Linkedin, Twitter, Award, BookOpen, Users, Star,
+  DollarSign, MapPin, Briefcase, Languages, Calendar,
+  Upload, Check
 } from 'lucide-react'
 
 interface SpeakerProfile {
@@ -18,36 +20,15 @@ interface SpeakerProfile {
   website: string
   linkedin: string
   twitter: string
-  photo_url: string
+  profile_image_url: string
   specialties: string[]
   languages: string[]
   years_experience: number
-  speaking_fee_min: number
-  speaking_fee_max: number
-  travel_preferences: string
-  availability: string
-  achievements: Achievement[]
-  education: Education[]
-  past_talks: PastTalk[]
-}
-
-interface Achievement {
-  title: string
-  year: string
-  description: string
-}
-
-interface Education {
-  degree: string
-  institution: string
-  year: string
-}
-
-interface PastTalk {
-  title: string
-  event: string
-  date: string
-  attendees: number
+  speaking_fee_range: { min: number; max: number }
+  preferred_audience_size: string
+  preferred_formats: string[]
+  phone: string
+  booking_link: string
 }
 
 export default function ProfilePage() {
@@ -55,9 +36,10 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [activeSection, setActiveSection] = useState('overview')
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [newSpecialty, setNewSpecialty] = useState('')
   const [newLanguage, setNewLanguage] = useState('')
+  const [newFormat, setNewFormat] = useState('')
   const supabase = createClient()
 
   useEffect(() => {
@@ -81,26 +63,24 @@ export default function ProfilePage() {
       // Transform member data to profile structure
       setProfile({
         id: member.id,
-        name: member.name,
+        name: member.name || '',
         email: member.email,
         bio: member.bio || '',
         title: member.title || '',
-        company: member.company || '',
+        company: '',
         location: member.location || '',
         website: member.website || '',
-        linkedin: member.linkedin || '',
-        twitter: member.twitter || '',
-        photo_url: member.photo_url || '',
+        linkedin: member.linkedin || member.linkedin_url || '',
+        twitter: '',
+        profile_image_url: member.profile_image_url || '',
         specialties: member.specialties || [],
         languages: member.languages || ['English'],
         years_experience: member.years_experience || 0,
-        speaking_fee_min: member.speaking_fee_min || 0,
-        speaking_fee_max: member.speaking_fee_max || 0,
-        travel_preferences: member.travel_preferences || 'Flexible',
-        availability: member.availability || 'Available',
-        achievements: member.achievements || [],
-        education: member.education || [],
-        past_talks: member.past_talks || []
+        speaking_fee_range: member.speaking_fee_range || { min: 0, max: 0 },
+        preferred_audience_size: member.preferred_audience_size || 'medium',
+        preferred_formats: member.preferred_formats || [],
+        phone: member.phone || '',
+        booking_link: member.booking_link || ''
       })
     } catch (error) {
       console.error('Error fetching profile:', error)
@@ -117,23 +97,21 @@ export default function ProfilePage() {
       const { error } = await supabase
         .from('members')
         .update({
+          name: profile.name,
           bio: profile.bio,
           title: profile.title,
-          company: profile.company,
           location: profile.location,
           website: profile.website,
           linkedin: profile.linkedin,
-          twitter: profile.twitter,
+          linkedin_url: profile.linkedin,
+          phone: profile.phone,
+          booking_link: profile.booking_link,
           specialties: profile.specialties,
           languages: profile.languages,
           years_experience: profile.years_experience,
-          speaking_fee_min: profile.speaking_fee_min,
-          speaking_fee_max: profile.speaking_fee_max,
-          travel_preferences: profile.travel_preferences,
-          availability: profile.availability,
-          achievements: profile.achievements,
-          education: profile.education,
-          past_talks: profile.past_talks,
+          speaking_fee_range: profile.speaking_fee_range,
+          preferred_audience_size: profile.preferred_audience_size,
+          preferred_formats: profile.preferred_formats,
           updated_at: new Date().toISOString()
         })
         .eq('id', profile.id)
@@ -143,13 +121,58 @@ export default function ProfilePage() {
       setEditing(false)
     } catch (error) {
       console.error('Error saving profile:', error)
+      alert('Failed to save profile. Please try again.')
     } finally {
       setSaving(false)
     }
   }
 
+  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file || !profile) return
+
+    setUploadingImage(true)
+    try {
+      // Create unique file name
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${profile.id}-${Date.now()}.${fileExt}`
+      const filePath = `members/${fileName}`
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      // Update profile with new image URL
+      const { error: updateError } = await supabase
+        .from('members')
+        .update({ 
+          profile_image_url: publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', profile.id)
+
+      if (updateError) throw updateError
+
+      // Update local state
+      setProfile({ ...profile, profile_image_url: publicUrl })
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      alert('Failed to upload image. Please try again.')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   function addSpecialty() {
-    if (newSpecialty && profile) {
+    if (newSpecialty && profile && !profile.specialties.includes(newSpecialty)) {
       setProfile({
         ...profile,
         specialties: [...profile.specialties, newSpecialty]
@@ -168,7 +191,7 @@ export default function ProfilePage() {
   }
 
   function addLanguage() {
-    if (newLanguage && profile) {
+    if (newLanguage && profile && !profile.languages.includes(newLanguage)) {
       setProfile({
         ...profile,
         languages: [...profile.languages, newLanguage]
@@ -186,28 +209,21 @@ export default function ProfilePage() {
     }
   }
 
-  function addAchievement() {
-    if (profile) {
+  function addFormat() {
+    if (newFormat && profile && !profile.preferred_formats.includes(newFormat)) {
       setProfile({
         ...profile,
-        achievements: [...profile.achievements, { title: '', year: '', description: '' }]
+        preferred_formats: [...profile.preferred_formats, newFormat]
       })
+      setNewFormat('')
     }
   }
 
-  function updateAchievement(index: number, field: keyof Achievement, value: string) {
-    if (profile) {
-      const updated = [...profile.achievements]
-      updated[index] = { ...updated[index], [field]: value }
-      setProfile({ ...profile, achievements: updated })
-    }
-  }
-
-  function removeAchievement(index: number) {
+  function removeFormat(index: number) {
     if (profile) {
       setProfile({
         ...profile,
-        achievements: profile.achievements.filter((_, i) => i !== index)
+        preferred_formats: profile.preferred_formats.filter((_, i) => i !== index)
       })
     }
   }
@@ -242,11 +258,11 @@ export default function ProfilePage() {
           <div className="flex items-start justify-between -mt-16">
             {/* Profile Photo */}
             <div className="relative">
-              {profile.photo_url ? (
+              {profile.profile_image_url ? (
                 <img
-                  src={profile.photo_url}
+                  src={profile.profile_image_url}
                   alt={profile.name}
-                  className="h-32 w-32 rounded-full border-4 border-white"
+                  className="h-32 w-32 rounded-full border-4 border-white object-cover"
                 />
               ) : (
                 <div className="h-32 w-32 rounded-full border-4 border-white bg-foam flex items-center justify-center">
@@ -256,9 +272,21 @@ export default function ProfilePage() {
                 </div>
               )}
               {editing && (
-                <button className="absolute bottom-0 right-0 bg-calm text-white p-2 rounded-full hover:bg-deep">
+                <label className="absolute bottom-0 right-0 bg-calm text-white p-2 rounded-full hover:bg-deep cursor-pointer">
                   <Camera className="h-4 w-4" />
-                </button>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                    disabled={uploadingImage}
+                  />
+                </label>
+              )}
+              {uploadingImage && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                </div>
               )}
             </div>
 
@@ -298,44 +326,95 @@ export default function ProfilePage() {
           <div className="mt-4">
             {editing ? (
               <div className="space-y-4">
-                <input
-                  type="text"
-                  className="text-2xl font-bold form-input"
-                  value={profile.name}
-                  onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                />
                 <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">Full Name</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={profile.name}
+                      onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Phone</label>
+                    <input
+                      type="tel"
+                      className="form-input"
+                      placeholder="(555) 123-4567"
+                      value={profile.phone}
+                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="form-label">Professional Title</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="Title"
+                    placeholder="e.g., CEO, Speaker, Consultant"
                     value={profile.title}
                     onChange={(e) => setProfile({ ...profile, title: e.target.value })}
                   />
+                </div>
+
+                <div>
+                  <label className="form-label">Location</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="Company"
-                    value={profile.company}
-                    onChange={(e) => setProfile({ ...profile, company: e.target.value })}
+                    placeholder="City, State/Country"
+                    value={profile.location}
+                    onChange={(e) => setProfile({ ...profile, location: e.target.value })}
                   />
                 </div>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="Location"
-                  value={profile.location}
-                  onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-                />
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="form-label">Website</label>
+                    <input
+                      type="url"
+                      className="form-input"
+                      placeholder="https://yourwebsite.com"
+                      value={profile.website}
+                      onChange={(e) => setProfile({ ...profile, website: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">LinkedIn</label>
+                    <input
+                      type="url"
+                      className="form-input"
+                      placeholder="https://linkedin.com/in/yourprofile"
+                      value={profile.linkedin}
+                      onChange={(e) => setProfile({ ...profile, linkedin: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Booking Link</label>
+                    <input
+                      type="url"
+                      className="form-input"
+                      placeholder="https://calendly.com/yourlink"
+                      value={profile.booking_link}
+                      onChange={(e) => setProfile({ ...profile, booking_link: e.target.value })}
+                    />
+                  </div>
+                </div>
               </div>
             ) : (
               <>
                 <h1 className="text-2xl font-bold text-deep">{profile.name}</h1>
-                <p className="text-lg text-gray-600">
-                  {profile.title} {profile.company && `at ${profile.company}`}
-                </p>
+                <p className="text-lg text-gray-600">{profile.title}</p>
                 {profile.location && (
-                  <p className="text-gray-500 mt-1">{profile.location}</p>
+                  <p className="text-gray-500 mt-1 flex items-center">
+                    <MapPin className="h-4 w-4 mr-1" />
+                    {profile.location}
+                  </p>
+                )}
+                {profile.phone && (
+                  <p className="text-gray-500 mt-1">📱 {profile.phone}</p>
                 )}
               </>
             )}
@@ -355,10 +434,10 @@ export default function ProfilePage() {
                 <Linkedin className="h-5 w-5" />
               </a>
             )}
-            {profile.twitter && (
-              <a href={profile.twitter} target="_blank" rel="noopener noreferrer"
+            {profile.booking_link && (
+              <a href={profile.booking_link} target="_blank" rel="noopener noreferrer"
                  className="text-gray-600 hover:text-calm">
-                <Twitter className="h-5 w-5" />
+                <Calendar className="h-5 w-5" />
               </a>
             )}
           </div>
@@ -375,10 +454,10 @@ export default function ProfilePage() {
             {editing ? (
               <textarea
                 className="form-textarea w-full"
-                rows={6}
+                rows={8}
                 value={profile.bio}
                 onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                placeholder="Tell us about yourself..."
+                placeholder="Tell us about yourself, your experience, and what you speak about..."
               />
             ) : (
               <p className="text-gray-600 whitespace-pre-wrap">
@@ -389,7 +468,7 @@ export default function ProfilePage() {
 
           {/* Specialties */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold text-deep mb-4">Speaking Topics</h2>
+            <h2 className="text-xl font-bold text-deep mb-4">Speaking Topics & Expertise</h2>
             {editing ? (
               <div className="space-y-4">
                 <div className="flex flex-wrap gap-2">
@@ -409,12 +488,13 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     className="form-input flex-1"
-                    placeholder="Add a specialty..."
+                    placeholder="Add a specialty or topic..."
                     value={newSpecialty}
                     onChange={(e) => setNewSpecialty(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && addSpecialty()}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialty())}
                   />
                   <button
+                    type="button"
                     onClick={addSpecialty}
                     className="btn btn-outline"
                   >
@@ -437,69 +517,59 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Experience & Achievements */}
+          {/* Preferred Formats */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold text-deep mb-4">Achievements</h2>
+            <h2 className="text-xl font-bold text-deep mb-4">Preferred Speaking Formats</h2>
             {editing ? (
               <div className="space-y-4">
-                {profile.achievements.map((achievement, index) => (
-                  <div key={index} className="p-4 border rounded-lg">
-                    <div className="grid grid-cols-2 gap-4 mb-2">
-                      <input
-                        type="text"
-                        className="form-input"
-                        placeholder="Achievement title"
-                        value={achievement.title}
-                        onChange={(e) => updateAchievement(index, 'title', e.target.value)}
-                      />
-                      <input
-                        type="text"
-                        className="form-input"
-                        placeholder="Year"
-                        value={achievement.year}
-                        onChange={(e) => updateAchievement(index, 'year', e.target.value)}
-                      />
+                <div className="flex flex-wrap gap-2">
+                  {profile.preferred_formats.map((format, index) => (
+                    <div key={index} className="badge badge-success flex items-center gap-2">
+                      {format}
+                      <button
+                        onClick={() => removeFormat(index)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </div>
-                    <textarea
-                      className="form-textarea w-full"
-                      placeholder="Description"
-                      rows={2}
-                      value={achievement.description}
-                      onChange={(e) => updateAchievement(index, 'description', e.target.value)}
-                    />
-                    <button
-                      onClick={() => removeAchievement(index)}
-                      className="text-red-500 hover:text-red-700 text-sm mt-2"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                <button
-                  onClick={addAchievement}
-                  className="btn btn-outline w-full"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Achievement
-                </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    className="form-select flex-1"
+                    value={newFormat}
+                    onChange={(e) => setNewFormat(e.target.value)}
+                  >
+                    <option value="">Select a format...</option>
+                    <option value="Keynote">Keynote</option>
+                    <option value="Workshop">Workshop</option>
+                    <option value="Panel">Panel Discussion</option>
+                    <option value="Webinar">Webinar</option>
+                    <option value="Fireside Chat">Fireside Chat</option>
+                    <option value="Training">Training Session</option>
+                    <option value="Breakout">Breakout Session</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={addFormat}
+                    disabled={!newFormat}
+                    className="btn btn-outline"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="space-y-4">
-                {profile.achievements.length > 0 ? (
-                  profile.achievements.map((achievement, index) => (
-                    <div key={index} className="border-l-4 border-calm pl-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{achievement.title}</h3>
-                          <p className="text-sm text-gray-500">{achievement.year}</p>
-                          <p className="text-gray-600 mt-1">{achievement.description}</p>
-                        </div>
-                        <Award className="h-5 w-5 text-sand" />
-                      </div>
-                    </div>
+              <div className="flex flex-wrap gap-2">
+                {profile.preferred_formats.length > 0 ? (
+                  profile.preferred_formats.map((format, index) => (
+                    <span key={index} className="badge badge-success">
+                      {format}
+                    </span>
                   ))
                 ) : (
-                  <p className="text-gray-500">No achievements added yet.</p>
+                  <p className="text-gray-500">No preferred formats specified.</p>
                 )}
               </div>
             )}
@@ -519,7 +589,7 @@ export default function ProfilePage() {
                     type="number"
                     className="form-input"
                     value={profile.years_experience}
-                    onChange={(e) => setProfile({ ...profile, years_experience: parseInt(e.target.value) })}
+                    onChange={(e) => setProfile({ ...profile, years_experience: parseInt(e.target.value) || 0 })}
                   />
                 </div>
                 <div>
@@ -529,42 +599,42 @@ export default function ProfilePage() {
                       type="number"
                       className="form-input"
                       placeholder="Min ($)"
-                      value={profile.speaking_fee_min}
-                      onChange={(e) => setProfile({ ...profile, speaking_fee_min: parseInt(e.target.value) })}
+                      value={profile.speaking_fee_range.min}
+                      onChange={(e) => setProfile({ 
+                        ...profile, 
+                        speaking_fee_range: { 
+                          ...profile.speaking_fee_range, 
+                          min: parseInt(e.target.value) || 0 
+                        }
+                      })}
                     />
                     <input
                       type="number"
                       className="form-input"
                       placeholder="Max ($)"
-                      value={profile.speaking_fee_max}
-                      onChange={(e) => setProfile({ ...profile, speaking_fee_max: parseInt(e.target.value) })}
+                      value={profile.speaking_fee_range.max}
+                      onChange={(e) => setProfile({ 
+                        ...profile, 
+                        speaking_fee_range: { 
+                          ...profile.speaking_fee_range, 
+                          max: parseInt(e.target.value) || 0 
+                        }
+                      })}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="form-label">Travel Preferences</label>
+                  <label className="form-label">Preferred Audience Size</label>
                   <select
                     className="form-select"
-                    value={profile.travel_preferences}
-                    onChange={(e) => setProfile({ ...profile, travel_preferences: e.target.value })}
+                    value={profile.preferred_audience_size}
+                    onChange={(e) => setProfile({ ...profile, preferred_audience_size: e.target.value })}
                   >
-                    <option value="Flexible">Flexible</option>
-                    <option value="Local Only">Local Only</option>
-                    <option value="Regional">Regional</option>
-                    <option value="National">National</option>
-                    <option value="International">International</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="form-label">Availability</label>
-                  <select
-                    className="form-select"
-                    value={profile.availability}
-                    onChange={(e) => setProfile({ ...profile, availability: e.target.value })}
-                  >
-                    <option value="Available">Available</option>
-                    <option value="Busy">Busy</option>
-                    <option value="Not Available">Not Available</option>
+                    <option value="small">Small (< 50)</option>
+                    <option value="medium">Medium (50-200)</option>
+                    <option value="large">Large (200-500)</option>
+                    <option value="very-large">Very Large (500+)</option>
+                    <option value="any">Any Size</option>
                   </select>
                 </div>
               </div>
@@ -577,18 +647,12 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Fee Range</span>
                   <span className="font-semibold">
-                    ${profile.speaking_fee_min} - ${profile.speaking_fee_max}
+                    ${profile.speaking_fee_range.min.toLocaleString()} - ${profile.speaking_fee_range.max.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Travel</span>
-                  <span className="font-semibold">{profile.travel_preferences}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Status</span>
-                  <span className={`badge ${profile.availability === 'Available' ? 'badge-success' : 'badge-warning'}`}>
-                    {profile.availability}
-                  </span>
+                  <span className="text-gray-600">Audience Size</span>
+                  <span className="font-semibold capitalize">{profile.preferred_audience_size}</span>
                 </div>
               </div>
             )}
@@ -619,9 +683,10 @@ export default function ProfilePage() {
                     placeholder="Add language..."
                     value={newLanguage}
                     onChange={(e) => setNewLanguage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && addLanguage()}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addLanguage())}
                   />
                   <button
+                    type="button"
                     onClick={addLanguage}
                     className="btn btn-outline"
                   >
@@ -647,27 +712,45 @@ export default function ProfilePage() {
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
                   className="bg-calm h-2 rounded-full"
-                  style={{ width: '75%' }}
+                  style={{ 
+                    width: `${calculateProfileCompletion()}%` 
+                  }}
                 ></div>
               </div>
-              <p className="text-sm text-gray-600">Your profile is 75% complete</p>
+              <p className="text-sm text-gray-600">
+                Your profile is {calculateProfileCompletion()}% complete
+              </p>
               <div className="space-y-2 text-sm">
-                <div className="flex items-center text-green-600">
-                  <Check className="h-4 w-4 mr-2" />
-                  Added bio
-                </div>
-                <div className="flex items-center text-green-600">
-                  <Check className="h-4 w-4 mr-2" />
-                  Added specialties
-                </div>
-                <div className="flex items-center text-gray-400">
-                  <X className="h-4 w-4 mr-2" />
-                  Add profile photo
-                </div>
-                <div className="flex items-center text-gray-400">
-                  <X className="h-4 w-4 mr-2" />
-                  Add past talks
-                </div>
+                {profile.bio && (
+                  <div className="flex items-center text-green-600">
+                    <Check className="h-4 w-4 mr-2" />
+                    Added bio
+                  </div>
+                )}
+                {profile.specialties.length > 0 && (
+                  <div className="flex items-center text-green-600">
+                    <Check className="h-4 w-4 mr-2" />
+                    Added specialties
+                  </div>
+                )}
+                {profile.profile_image_url && (
+                  <div className="flex items-center text-green-600">
+                    <Check className="h-4 w-4 mr-2" />
+                    Added profile photo
+                  </div>
+                )}
+                {!profile.profile_image_url && (
+                  <div className="flex items-center text-gray-400">
+                    <X className="h-4 w-4 mr-2" />
+                    Add profile photo
+                  </div>
+                )}
+                {!profile.website && (
+                  <div className="flex items-center text-gray-400">
+                    <X className="h-4 w-4 mr-2" />
+                    Add website
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -675,4 +758,29 @@ export default function ProfilePage() {
       </div>
     </div>
   )
+
+  function calculateProfileCompletion(): number {
+    if (!profile) return 0
+    let score = 0
+    const checks = [
+      profile.bio,
+      profile.title,
+      profile.location,
+      profile.website,
+      profile.linkedin,
+      profile.profile_image_url,
+      profile.specialties.length > 0,
+      profile.languages.length > 0,
+      profile.years_experience > 0,
+      profile.speaking_fee_range.max > 0,
+      profile.phone,
+      profile.preferred_formats.length > 0
+    ]
+    
+    checks.forEach(check => {
+      if (check) score += 100 / checks.length
+    })
+    
+    return Math.round(score)
+  }
 }
