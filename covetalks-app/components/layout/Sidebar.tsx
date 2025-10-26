@@ -17,6 +17,8 @@ import {
   Star,
   Calendar,
   LogOut,
+  Plus,
+  Heart
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -27,90 +29,27 @@ interface SidebarProps {
   userEmail?: string
 }
 
+// For Speakers
 const speakerNavItems = [
-  {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    title: 'Opportunities',
-    href: '/opportunities',
-    icon: Briefcase,
-  },
-  {
-    title: 'My Applications',
-    href: '/applications',
-    icon: FileText,
-  },
-  {
-    title: 'Messages',
-    href: '/messages',
-    icon: MessageSquare,
-  },
-  {
-    title: 'Profile',
-    href: '/profile',
-    icon: User,
-  },
-  {
-    title: 'Reviews',
-    href: '/reviews',
-    icon: Star,
-  },
-  {
-    title: 'Settings',
-    href: '/settings',
-    icon: Settings,
-  },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/opportunities', label: 'Opportunities', icon: Briefcase },
+  { href: '/applications', label: 'My Applications', icon: FileText },
+  { href: '/messages', label: 'Messages', icon: MessageSquare },
+  { href: '/profile', label: 'Profile', icon: User },
+  { href: '/reviews', label: 'Reviews', icon: Star },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
+// For Organizations
 const organizationNavItems = [
-  {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    title: 'My Opportunities',
-    href: '/opportunities',
-    icon: Briefcase,
-  },
-  {
-    title: 'Browse Speakers',
-    href: '/speakers',
-    icon: Users,
-  },
-  {
-    title: 'Applications',
-    href: '/applications',
-    icon: FileText,
-  },
-  {
-    title: 'Messages',
-    href: '/messages',
-    icon: MessageSquare,
-  },
-  {
-    title: 'Organization',
-    href: '/organization',
-    icon: Building2,
-  },
-  {
-    title: 'Saved Speakers',
-    href: '/saved',
-    icon: Star,
-  },
-  {
-    title: 'Calendar',
-    href: '/calendar',
-    icon: Calendar,
-  },
-  {
-    title: 'Settings',
-    href: '/settings',
-    icon: Settings,
-  },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/opportunities', label: 'My Opportunities', icon: Briefcase },
+  { href: '/opportunities/new', label: 'Post Opportunity', icon: Plus },
+  { href: '/speakers', label: 'Browse Speakers', icon: Users },
+  { href: '/applications', label: 'Applications', icon: FileText },
+  { href: '/messages', label: 'Messages', icon: MessageSquare },
+  { href: '/saved', label: 'Saved Speakers', icon: Heart },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function Sidebar({ userType, userName, userEmail }: SidebarProps) {
@@ -194,7 +133,7 @@ export default function Sidebar({ userType, userName, userEmail }: SidebarProps)
                     )}
                   >
                     <Icon className={cn('h-5 w-5', !collapsed && 'mr-3')} />
-                    {!collapsed && <span>{item.title}</span>}
+                    {!collapsed && <span>{item.label}</span>}
                   </Link>
                 </li>
               )

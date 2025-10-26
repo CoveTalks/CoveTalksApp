@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Brandon Text Font Family */
+/* Brandon Text Font Family - Updated to match your file names */
 @font-face {
   font-family: 'Brandon Text';
   src: url('/fonts/BrandonText.woff2') format('woff2'),
@@ -12,6 +12,7 @@
   font-display: swap;
 }
 
+/* Use the same font file for all weights if you only have one */
 @font-face {
   font-family: 'Brandon Text';
   src: url('/fonts/BrandonText.woff2') format('woff2'),
@@ -41,26 +42,61 @@
 
 @layer base {
   :root {
+    /* CoveTalks Brand Colors - Exact Match */
+    --color-deep: #063A54;
+    --color-calm: #00758F;
+    --color-sand: #E2AD79;
+    --color-foam: #E8F0F4;
+    
+    /* Extended Palette */
+    --color-deep-dark: #052940;
+    --color-calm-light: #4DA5B8;
+    --color-sand-light: #F0C99B;
+    --color-foam-dark: #D6E3E9;
+    
+    /* Semantic Colors for Tailwind */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 205 29% 20%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 205 29% 20%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 205 29% 20%;
     --primary: 189 100% 28%;
-    --primary-foreground: 210 40% 98%;
+    --primary-foreground: 0 0% 100%;
     --secondary: 199 85% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 193 30% 95%;
+    --muted-foreground: 205 10% 40%;
     --accent: 30 67% 69%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --accent-foreground: 205 29% 20%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 193 30% 90%;
+    --input: 193 30% 90%;
     --ring: 189 100% 28%;
     --radius: 0.5rem;
+    
+    /* Typography */
+    --font-primary: 'Brandon Text', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-bold: 700;
+    --font-weight-black: 900;
+    
+    /* Spacing - Matching Marketing Site */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+    --spacing-3xl: 4rem;
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 5px 15px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 15px 40px rgba(0, 0, 0, 0.15);
   }
 
   * {
@@ -68,27 +104,136 @@
   }
   
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground;
+    font-family: var(--font-primary);
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-primary);
+    font-weight: var(--font-weight-bold);
+  }
+}
+
+@layer components {
+  /* Button Styles - Matching Marketing Site */
+  .btn {
+    @apply px-6 py-3 rounded-lg font-medium transition-all duration-300 inline-block text-center cursor-pointer;
+  }
+  
+  .btn-primary {
+    @apply bg-calm text-white hover:bg-deep;
+    background-color: var(--color-calm);
+  }
+  
+  .btn-primary:hover {
+    background-color: var(--color-deep);
+  }
+  
+  .btn-secondary {
+    @apply bg-sand text-white hover:opacity-90;
+    background-color: var(--color-sand);
+  }
+  
+  .btn-outline {
+    @apply border-2 border-calm text-calm hover:bg-calm hover:text-white;
+  }
+  
+  .btn-ghost {
+    @apply text-calm hover:bg-foam;
+  }
+  
+  /* Card Styles */
+  .dashboard-card {
+    @apply bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow;
+  }
+  
+  /* Form Styles - Matching Marketing Site */
+  .form-group {
+    @apply mb-4;
+  }
+  
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 mb-2;
+  }
+  
+  .form-input {
+    @apply w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-calm focus:border-transparent transition-all;
+    border-color: var(--color-border);
+  }
+  
+  .form-textarea {
+    @apply w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-calm focus:border-transparent transition-all resize-y;
+  border-color: var(--color-border);
+  }
+  
+  .form-select {
+    @apply w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-calm focus:border-transparent transition-all appearance-none bg-white;
+    border-color: var(--color-border);
+  }
+  
+  /* Navigation Active State */
+  .nav-active {
+    @apply bg-foam text-deep font-semibold;
+  }
+  
+  /* Status Badges */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .badge-success {
+    @apply bg-green-100 text-green-800;
+  }
+  
+  .badge-warning {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+  
+  .badge-danger {
+    @apply bg-red-100 text-red-800;
+  }
+  
+  .badge-info {
+    @apply bg-blue-100 text-blue-800;
+  }
+  
+  /* Empty States */
+  .empty-state {
+    @apply text-center py-12;
+  }
+  
+  .empty-state-icon {
+    @apply text-6xl mb-4 opacity-30;
+  }
+  
+  .empty-state-text {
+    @apply text-gray-500 text-lg;
   }
 }
 
 @layer utilities {
   /* Text gradients using brand colors */
   .text-gradient-primary {
-    @apply bg-gradient-to-r from-deep to-calm bg-clip-text text-transparent;
+    background: linear-gradient(135deg, var(--color-deep), var(--color-calm));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
   
   .text-gradient-accent {
-    @apply bg-gradient-to-r from-calm to-sand bg-clip-text text-transparent;
+    background: linear-gradient(135deg, var(--color-calm), var(--color-sand));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
   
   /* Background gradients */
   .bg-gradient-primary {
-    @apply bg-gradient-to-br from-deep to-calm;
+    background: linear-gradient(135deg, var(--color-deep), var(--color-calm));
   }
   
   .bg-gradient-soft {
-    @apply bg-gradient-to-br from-foam to-white;
+    background: linear-gradient(135deg, var(--color-foam), #ffffff);
   }
   
   /* Custom shadows with brand colors */
@@ -113,21 +258,49 @@
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-foam;
+  background: var(--color-foam);
   border-radius: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-calm;
+  background: var(--color-calm);
   border-radius: 8px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-deep;
+  background: var(--color-deep);
 }
 
 /* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #00758F #E8F0F4;
+  scrollbar-color: var(--color-calm) var(--color-foam);
+}
+
+/* Loading Animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Skeleton Loading */
+.skeleton {
+  @apply animate-pulse bg-gray-200 rounded;
+}
+
+/* Responsive Typography */
+@media (max-width: 768px) {
+  :root {
+    --spacing-md: 0.875rem;
+    --spacing-lg: 1.25rem;
+    --spacing-xl: 1.75rem;
+  }
 }
