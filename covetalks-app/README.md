@@ -295,3 +295,107 @@ MIT
 ---
 
 **Built with ❤️ for CoveTalks**
+
+// Add this to your existing database.types.ts file in the members table definition
+
+// Update the members table Row type to include:
+export interface MemberMetadata {
+  past_talks?: Array<{
+    id: string
+    title: string
+    event: string
+    date: string
+    location: string
+    audience_size: string
+    topics?: string[]
+  }>
+  achievements?: Array<{
+    id: string
+    title: string
+    description: string
+    year: string
+    icon?: string
+  }>
+  social_media?: {
+    twitter?: string
+    facebook?: string
+    instagram?: string
+    youtube?: string
+    other?: string
+  }
+}
+
+// In your Database type definition, update the members table:
+export interface Database {
+  public: {
+    Tables: {
+      members: {
+        Row: {
+          id: string
+          email: string
+          name: string
+          member_type: 'Speaker' | 'Organization'
+          status: 'Active' | 'Inactive' | 'Pending'
+          phone: string | null
+          location: string | null
+          bio: string | null
+          website: string | null
+          linkedin: string | null
+          linkedin_url: string | null
+          booking_link: string | null
+          profile_image_url: string | null
+          specialties: string[] | null
+          years_experience: number | null
+          speaking_fee_range: {
+            min: number
+            max: number
+          } | null
+          languages: string[] | null
+          stripe_customer_id: string | null
+          average_rating: number | null
+          total_reviews: number | null
+          profile_views: number | null
+          title: string | null
+          preferred_audience_size: string | null
+          preferred_formats: string[] | null
+          notification_preferences: Record<string, any> | null
+          privacy_settings: {
+            show_fees?: boolean
+            show_contact?: boolean
+            public_profile?: boolean
+          } | null
+          metadata: MemberMetadata | null  // <-- Add this line
+          created_at: string
+          updated_at: string
+          last_login: string | null
+          verified: boolean | null
+        }
+        Insert: {
+          // ... similar structure with metadata?: MemberMetadata | null
+        }
+        Update: {
+          // ... similar structure with metadata?: MemberMetadata | null
+        }
+      }
+      // ... other tables
+    }
+  }
+}
+
+// Usage example in your components:
+import { Database } from '@/lib/supabase/database.types'
+
+type Member = Database['public']['Tables']['members']['Row']
+
+// When fetching member data:
+const { data: member } = await supabase
+  .from('members')
+  .select('*')
+  .single()
+
+// TypeScript will now properly type member.metadata with the structure above
+if (member?.metadata?.past_talks) {
+  member.metadata.past_talks.forEach(talk => {
+    console.log(talk.title) // Fully typed!
+  })
+}
