@@ -1,20 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { Users, Mic } from 'lucide-react'
+import { Users, Mic, CheckCircle } from 'lucide-react'
 
 export default function OnboardingPage() {
   const [selectedType, setSelectedType] = useState<'Speaker' | 'Organization' | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [checkingUser, setCheckingUser] = useState(true)
+  const [existingType, setExistingType] = useState<'Speaker' | 'Organization' | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+  
+  // Check if coming from Stripe
+  const fromStripe = searchParams.get('fromStripe') === 'true'
 
-  // Check if user already has member_type set (from marketing site registration)
   useEffect(() => {
     async function checkUserType() {
       try {
@@ -25,22 +29,33 @@ export default function OnboardingPage() {
           return
         }
 
-        // Check if member has type already set
+        // Check member status
         const { data: member } = await supabase
           .from('members')
-          .select('member_type')
+          .select('member_type, onboarding_completed')
           .eq('id', user.id)
           .single()
 
-        if (member?.member_type) {
-          // Member type already set, skip onboarding
-          console.log('Member type already set, redirecting to dashboard')
-          router.push('/dashboard')
-        } else {
-          // Need to select type
-          setCheckingUser(false)
-          setLoading(false)
+        if (member) {
+          // If onboarding is already completed, go to dashboard
+          if (member.onboarding_completed) {
+            console.log('Onboarding already completed, redirecting to dashboard')
+            const url = fromStripe ? '/dashboard?subscription=success' : '/dashboard'
+            router.push(url)
+            return
+          }
+
+          // If member_type is set (from marketing site) but onboarding not completed
+          if (member.member_type && !member.onboarding_completed) {
+            console.log(`Member type already set to ${member.member_type}, pre-selecting`)
+            setExistingType(member.member_type as 'Speaker' | 'Organization')
+            setSelectedType(member.member_type as 'Speaker' | 'Organization')
+            // Don't redirect, let them confirm or continue to profile setup
+          }
         }
+
+        setCheckingUser(false)
+        setLoading(false)
       } catch (err: any) {
         console.error('Error checking user type:', err)
         setError('Failed to load user information')
@@ -50,7 +65,7 @@ export default function OnboardingPage() {
     }
 
     checkUserType()
-  }, [router, supabase])
+  }, [router, supabase, fromStripe])
 
   const handleContinue = async () => {
     if (!selectedType) {
@@ -68,16 +83,23 @@ export default function OnboardingPage() {
         throw new Error('No user found')
       }
 
-      // Update member type
+      // Update member type (in case it wasn't set or user changed selection)
       const { error: updateError } = await supabase
         .from('members')
-        .update({ member_type: selectedType })
+        .update({ 
+          member_type: selectedType,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', user.id)
 
       if (updateError) throw updateError
 
-      // Redirect to dashboard
-      router.push('/dashboard')
+      // Redirect to profile setup (not dashboard, since onboarding isn't complete)
+      const redirectUrl = '/auth/profile-setup'
+      const params = new URLSearchParams()
+      if (fromStripe) params.append('subscription', 'success')
+      
+      router.push(params.toString() ? `${redirectUrl}?${params.toString()}` : redirectUrl)
     } catch (err: any) {
       setError(err.message || 'Failed to update account type')
       setLoading(false)
@@ -89,8 +111,10 @@ export default function OnboardingPage() {
     return (
       <div className="min-h-screen bg-gradient-soft flex items-center justify-center">
         <div className="text-center">
-          <div className="loading-spinner mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+          <p className="text-muted-foreground">Loading your account...</p>
         </div>
       </div>
     )
@@ -101,10 +125,21 @@ export default function OnboardingPage() {
       <div className="w-full max-w-4xl">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-primary mb-4">Welcome to CoveTalks!</h1>
+          <h1 className="text-4xl font-bold text-primary mb-4">
+            {existingType ? 'Confirm Your Account Type' : 'Welcome to CoveTalks!'}
+          </h1>
           <p className="text-xl text-muted-foreground">
-            Let's set up your account. Are you a speaker or an organization?
+            {existingType 
+              ? `You selected ${existingType} during signup. You can confirm or change this selection.`
+              : "Let's set up your account. Are you a speaker or an organization?"
+            }
           </p>
+          {fromStripe && (
+            <div className="mt-4 inline-flex items-center gap-2 text-green-600 bg-green-50 px-4 py-2 rounded-lg">
+              <CheckCircle className="h-5 w-5" />
+              <span>Your subscription is active!</span>
+            </div>
+          )}
         </div>
 
         {error && (
@@ -138,19 +173,19 @@ export default function OnboardingPage() {
               </p>
               <ul className="text-sm text-left space-y-2">
                 <li className="flex items-start">
-                  <span className="text-primary mr-2">✓</span>
+                  <span className="text-primary mr-2">✔</span>
                   Browse speaking opportunities
                 </li>
                 <li className="flex items-start">
-                  <span className="text-primary mr-2">✓</span>
+                  <span className="text-primary mr-2">✔</span>
                   Apply to engagements
                 </li>
                 <li className="flex items-start">
-                  <span className="text-primary mr-2">✓</span>
+                  <span className="text-primary mr-2">✔</span>
                   Build your speaker profile
                 </li>
                 <li className="flex items-start">
-                  <span className="text-primary mr-2">✓</span>
+                  <span className="text-primary mr-2">✔</span>
                   Connect with organizations
                 </li>
               </ul>
@@ -168,6 +203,11 @@ export default function OnboardingPage() {
                 >
                   <path d="M5 13l4 4L19 7"></path>
                 </svg>
+              </div>
+            )}
+            {existingType === 'Speaker' && (
+              <div className="absolute top-2 left-2 bg-primary/10 text-primary text-xs px-2 py-1 rounded">
+                Current Selection
               </div>
             )}
           </button>
@@ -195,19 +235,19 @@ export default function OnboardingPage() {
               </p>
               <ul className="text-sm text-left space-y-2">
                 <li className="flex items-start">
-                  <span className="text-primary mr-2">✓</span>
+                  <span className="text-primary mr-2">✔</span>
                   Post speaking opportunities
                 </li>
                 <li className="flex items-start">
-                  <span className="text-primary mr-2">✓</span>
+                  <span className="text-primary mr-2">✔</span>
                   Browse speaker profiles
                 </li>
                 <li className="flex items-start">
-                  <span className="text-primary mr-2">✓</span>
+                  <span className="text-primary mr-2">✔</span>
                   Review applications
                 </li>
                 <li className="flex items-start">
-                  <span className="text-primary mr-2">✓</span>
+                  <span className="text-primary mr-2">✔</span>
                   Manage events
                 </li>
               </ul>
@@ -227,6 +267,11 @@ export default function OnboardingPage() {
                 </svg>
               </div>
             )}
+            {existingType === 'Organization' && (
+              <div className="absolute top-2 left-2 bg-primary/10 text-primary text-xs px-2 py-1 rounded">
+                Current Selection
+              </div>
+            )}
           </button>
         </div>
 
@@ -238,14 +283,17 @@ export default function OnboardingPage() {
             size="lg"
             className="px-12"
           >
-            {loading ? 'Setting up...' : 'Continue'}
+            {loading ? 'Setting up...' : existingType ? 'Continue to Profile Setup' : 'Continue'}
           </Button>
         </div>
 
         {/* Help Text */}
         <div className="mt-8 text-center">
           <p className="text-sm text-muted-foreground">
-            Don't worry, you can change this later in your settings
+            {existingType 
+              ? "Confirm your selection or choose a different account type"
+              : "Don't worry, you can change this later in your settings"
+            }
           </p>
         </div>
       </div>

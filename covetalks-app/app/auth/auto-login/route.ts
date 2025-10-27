@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { jwtVerify } from 'jose'
-import { cookies } from 'next/headers'
+
+// Environment variable validation
+function getEnvVar(name: string, defaultValue?: string): string {
+  const value = process.env[name] || defaultValue
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`)
+  }
+  return value
+}
 
 // Create Supabase admin client
 const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  getEnvVar('NEXT_PUBLIC_SUPABASE_URL'),
+  getEnvVar('SUPABASE_SERVICE_ROLE_KEY'),
   {
     auth: {
       autoRefreshToken: false,
@@ -18,10 +26,10 @@ const supabaseAdmin = createClient(
 // Verify the auto-login token
 async function verifyAutoLoginToken(token: string) {
   try {
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET || 'your-secret-key')
+    const secret = new TextEncoder().encode(getEnvVar('AUTH_SECRET', 'your-secret-key'))
     
     const { payload } = await jwtVerify(token, secret, {
-      maxTokenAge: '5m' // Must be used within 5 minutes
+      maxTokenAge: '5m'
     })
     
     return payload as { userId: string; email: string; purpose: string; jti: string }
@@ -34,7 +42,6 @@ async function verifyAutoLoginToken(token: string) {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const token = searchParams.get('token')
-  const isNewUser = searchParams.get('newUser') === 'true'
   const fromStripe = searchParams.get('fromStripe') === 'true'
   
   if (!token) {
@@ -43,7 +50,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Verify the JWT token
+    // Verify the JWT token from marketing site
     const tokenData = await verifyAutoLoginToken(token)
     
     if (!tokenData || tokenData.purpose !== 'auto-login') {
@@ -53,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     const { userId, email } = tokenData
     
-    // Check if this token has been used (prevent replay attacks)
+    // Check if token has been used (prevent replay attacks)
     const { data: usedToken } = await supabaseAdmin
       .from('used_auth_tokens')
       .select('id')
@@ -82,12 +89,50 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/login?error=user_not_found', request.url))
     }
     
-    // Create a magic link for automatic sign-in
+    // Check member profile to determine where to redirect
+    const { data: member } = await supabaseAdmin
+      .from('members')
+      .select('member_type, onboarding_completed')
+      .eq('id', userId)
+      .single()
+    
+    // Determine redirect path
+    let redirectPath = '/dashboard'
+    
+    if (!member) {
+      // Edge case: No member record at all
+      console.error('No member record found for user')
+      redirectPath = '/auth/onboarding' // Fallback to type selection
+    } else if (!member.member_type) {
+      // Edge case: Member exists but no type set (shouldn't happen with marketing site flow)
+      console.log('Member type not set, sending to type selection')
+      redirectPath = '/auth/onboarding'
+    } else if (!member.onboarding_completed) {
+      // Normal case: Member type is set, but profile setup not completed
+      console.log(`Member type is ${member.member_type}, sending to profile setup`)
+      redirectPath = '/auth/profile-setup'
+      if (fromStripe) {
+        redirectPath += '?subscription=success'
+      }
+    } else {
+      // Member is fully onboarded - go to dashboard
+      console.log('Member fully onboarded, sending to dashboard')
+      redirectPath = '/dashboard'
+      if (fromStripe) {
+        redirectPath += '?subscription=success'
+      }
+    }
+    
+    console.log(`✅ Auto-login successful for ${email}`)
+    console.log(`   Member: type=${member?.member_type}, onboarding_completed=${member?.onboarding_completed}`)
+    console.log(`   Redirecting to: ${redirectPath}`)
+    
+    // Create a magic link for the user to establish session
     const { data: magicLink, error: magicLinkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: user.email!,
       options: {
-        redirectTo: '/'
+        redirectTo: redirectPath
       }
     })
     
@@ -95,145 +140,35 @@ export async function GET(request: NextRequest) {
       console.error('Failed to create magic link:', magicLinkError)
       return NextResponse.redirect(new URL('/auth/login?error=session_failed', request.url))
     }
-
-    // Extract the token from the magic link
+    
+    // Extract the token hash from the magic link
     const magicLinkUrl = new URL(magicLink.properties.action_link)
-    const accessToken = magicLinkUrl.searchParams.get('token')
+    const tokenHash = magicLinkUrl.searchParams.get('token')
+    const type = magicLinkUrl.searchParams.get('type') || 'magiclink'
     
-    if (!accessToken) {
-      console.error('No access token in magic link')
-      return NextResponse.redirect(new URL('/auth/login?error=no_access_token', request.url))
-    }
-
-    // Check member profile to determine redirect
-    const { data: member } = await supabaseAdmin
-      .from('members')
-      .select('member_type, onboarding_completed')
-      .eq('id', userId)
-      .single()
+    // Redirect to confirm page with the magic link token
+    const confirmUrl = new URL('/auth/confirm', request.url)
+    confirmUrl.searchParams.set('token', tokenHash || '')
+    confirmUrl.searchParams.set('type', type)
+    confirmUrl.searchParams.set('next', redirectPath)
     
-    let redirectPath = '/dashboard'
-    
-    if (!member) {
-      console.error('Member profile not found')
-      redirectPath = '/auth/onboarding'
-    } else if (!member.member_type) {
-      // Edge case: member exists but no type (shouldn't happen with new flow)
-      redirectPath = '/auth/onboarding'
-    } else if (!member.onboarding_completed) {
-      // Member type is set but onboarding not completed
-      redirectPath = '/auth/profile-setup'
-    } else {
-      // Fully set up, go to dashboard
-      redirectPath = '/dashboard'
-    }
-    
-    // Add success flag for new users or Stripe returns
-    if (isNewUser) {
-      redirectPath += '?welcome=true'
-    } else if (fromStripe) {
-      redirectPath += '?subscription=success'
-    }
-    
-    // Create response with redirect
-    const response = NextResponse.redirect(new URL(`/auth/confirm?token=${accessToken}&type=magiclink&next=${encodeURIComponent(redirectPath)}`, request.url))
-    
-    // Set a session cookie for immediate access
-    const cookieStore = cookies()
-    cookieStore.set('supabase-auth-token', JSON.stringify({
-      access_token: accessToken,
-      token_type: 'bearer',
-      expires_at: Date.now() + 3600 * 1000, // 1 hour
-      user
-    }), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 3600
-    })
-    
-    console.log(`✅ Auto-login successful for ${email}, redirecting to ${redirectPath}`)
-    
-    return response
+    return NextResponse.redirect(confirmUrl)
     
   } catch (error: any) {
     console.error('Auto-login error:', error)
     
-    // Log detailed error for debugging
+    // Log error for debugging (optional)
     await supabaseAdmin
       .from('auth_errors')
       .insert({
         error_type: 'auto_login_failed',
         error_message: error.message,
         error_stack: error.stack,
-        token: token.substring(0, 20) + '...', // Log partial token for debugging
+        token: token.substring(0, 20) + '...',
         timestamp: new Date().toISOString()
       })
+      .catch(console.error) // Don't fail if logging fails
     
     return NextResponse.redirect(new URL('/auth/login?error=auto_login_failed', request.url))
-  }
-}
-
-// POST endpoint to handle auto-login from marketing site (alternative approach)
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { userId, email, temporaryPassword } = body
-    
-    // This is an alternative approach using a temporary password
-    // The marketing site would generate a temporary password and send it here
-    
-    if (!userId || !email || !temporaryPassword) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
-    }
-    
-    // Verify the temporary password matches what we expect
-    const expectedPassword = `temp_${userId}_${email}_${process.env.AUTH_SECRET}`
-    const hashedExpected = await crypto.subtle.digest(
-      'SHA-256',
-      new TextEncoder().encode(expectedPassword)
-    )
-    const hashedReceived = await crypto.subtle.digest(
-      'SHA-256',
-      new TextEncoder().encode(temporaryPassword)
-    )
-    
-    if (Buffer.from(hashedExpected).toString('hex') !== Buffer.from(hashedReceived).toString('hex')) {
-      return NextResponse.json(
-        { error: 'Invalid temporary password' },
-        { status: 401 }
-      )
-    }
-    
-    // Create session for the user
-    const { data: magicLink, error } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
-      email,
-      options: {
-        redirectTo: '/'
-      }
-    })
-    
-    if (error || !magicLink) {
-      return NextResponse.json(
-        { error: 'Failed to create session' },
-        { status: 500 }
-      )
-    }
-    
-    return NextResponse.json({
-      success: true,
-      magicLink: magicLink.properties.action_link
-    })
-    
-  } catch (error: any) {
-    console.error('Auto-login POST error:', error)
-    return NextResponse.json(
-      { error: 'Auto-login failed', details: error.message },
-      { status: 500 }
-    )
   }
 }
