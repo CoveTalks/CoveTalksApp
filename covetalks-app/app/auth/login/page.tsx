@@ -27,18 +27,29 @@ export default function LoginPage() {
 
       if (signInError) throw signInError
 
-      // Check if user has their profile set up
+      // Check if user has their profile set up - now checking BOTH fields
       const { data: member } = await supabase
         .from('members')
-        .select('member_type')
+        .select('member_type, onboarding_completed')
         .eq('id', data.user?.id)
         .single()
 
-      if (!member?.member_type) {
-        // Edge case: member exists but no type set, go to onboarding
+      // Determine where to redirect based on member status
+      if (!member) {
+        // No member record at all - shouldn't happen but handle it
+        console.log('No member record found, creating one...')
         router.push('/auth/onboarding')
+      } else if (!member.member_type) {
+        // Edge case: member exists but no type set
+        console.log('Member type not set, going to type selection')
+        router.push('/auth/onboarding')
+      } else if (!member.onboarding_completed) {
+        // Member type is set but profile setup not completed
+        console.log(`Member type is ${member.member_type}, but onboarding not complete`)
+        router.push('/auth/profile-setup')
       } else {
-        // Normal case: user registered from marketing site, go to dashboard
+        // Fully onboarded user - go to dashboard
+        console.log('User fully onboarded, going to dashboard')
         router.push('/dashboard')
       }
     } catch (err: any) {

@@ -7,6 +7,7 @@ import {
   TrendingUp,
   Users,
   Calendar,
+  Building2,
 } from 'lucide-react'
 
 export default async function DashboardPage() {

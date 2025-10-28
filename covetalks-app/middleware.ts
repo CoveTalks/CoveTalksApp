@@ -34,16 +34,58 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const pathname = request.nextUrl.pathname
+
   // Protect dashboard routes
-  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
+  if (!user && pathname.startsWith('/dashboard')) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
-    url.searchParams.set('redirect', request.nextUrl.pathname)
+    url.searchParams.set('redirect', pathname)
     return NextResponse.redirect(url)
   }
 
   // Redirect authenticated users away from auth pages
-  if (user && request.nextUrl.pathname.startsWith('/auth')) {
+  // BUT allow certain auth pages that authenticated users need to access
+  if (user && pathname.startsWith('/auth')) {
+    // Allow these auth pages even for authenticated users:
+    const allowedAuthPages = [
+      '/auth/profile-setup',  // Users need this when onboarding_completed is false
+      '/auth/confirm',         // Needed for magic link confirmation
+      '/auth/onboarding',      // Edge case for type selection
+      '/auth/logout'           // If you have a logout page
+    ]
+    
+    // Check if current path is allowed
+    const isAllowedPage = allowedAuthPages.some(page => pathname.startsWith(page))
+    
+    if (isAllowedPage) {
+      // For profile-setup specifically, check if they should be there
+      if (pathname.startsWith('/auth/profile-setup')) {
+        // Check if onboarding is already completed
+        const { data: member } = await supabase
+          .from('members')
+          .select('onboarding_completed')
+          .eq('id', user.id)
+          .single()
+        
+        // If onboarding is already completed, redirect to dashboard
+        if (member?.onboarding_completed) {
+          const url = request.nextUrl.clone()
+          url.pathname = '/dashboard'
+          // Preserve subscription success parameter if present
+          const subscription = request.nextUrl.searchParams.get('subscription')
+          if (subscription) {
+            url.searchParams.set('subscription', subscription)
+          }
+          return NextResponse.redirect(url)
+        }
+      }
+      
+      // Allow access to the auth page
+      return supabaseResponse
+    }
+    
+    // For other auth pages (login, register, etc.), redirect to dashboard
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)

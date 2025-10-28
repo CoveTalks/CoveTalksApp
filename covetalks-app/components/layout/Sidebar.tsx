@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import {
   LayoutDashboard,
   Briefcase,
@@ -32,6 +33,7 @@ interface SidebarProps {
 // For Speakers
 const speakerNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/organizations', label: 'Organizations', icon: Building2 },
   { href: '/opportunities', label: 'Opportunities', icon: Briefcase },
   { href: '/applications', label: 'My Applications', icon: FileText },
   { href: '/messages', label: 'Messages', icon: MessageSquare },
@@ -54,13 +56,42 @@ const organizationNavItems = [
 
 export default function Sidebar({ userType, userName, userEmail }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
+  const supabase = createClient()
 
   const navItems = userType === 'Speaker' ? speakerNavItems : organizationNavItems
 
   const handleSignOut = async () => {
-    // TODO: Implement sign out logic
-    console.log('Sign out')
+    setSigningOut(true)
+    
+    try {
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut()
+      
+      if (error) {
+        console.error('Sign out error:', error)
+        // Even if there's an error, we should still redirect to login
+      }
+      
+      // Clear any local storage or session storage if you're using them
+      if (typeof window !== 'undefined') {
+        // Clear any app-specific storage
+        localStorage.removeItem('userType')
+        sessionStorage.clear()
+      }
+      
+      // Redirect to login page
+      router.push('/auth/login')
+      
+    } catch (err) {
+      console.error('Unexpected sign out error:', err)
+      // Still redirect even on error
+      router.push('/auth/login')
+    } finally {
+      setSigningOut(false)
+    }
   }
 
   return (
@@ -118,7 +149,8 @@ export default function Sidebar({ userType, userName, userEmail }: SidebarProps)
           <ul className="space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+              const isActive = pathname === item.href || 
+                (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'))
               
               return (
                 <li key={item.href}>
@@ -150,9 +182,10 @@ export default function Sidebar({ userType, userName, userEmail }: SidebarProps)
               collapsed ? 'justify-center px-0' : 'justify-start'
             )}
             onClick={handleSignOut}
+            disabled={signingOut}
           >
             <LogOut className={cn('h-5 w-5', !collapsed && 'mr-3')} />
-            {!collapsed && <span>Sign Out</span>}
+            {!collapsed && <span>{signingOut ? 'Signing out...' : 'Sign Out'}</span>}
           </Button>
         </div>
       </div>
