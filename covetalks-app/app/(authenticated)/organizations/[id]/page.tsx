@@ -167,8 +167,8 @@ export default function OrganizationProfilePage() {
             sender_id: currentUser.id,
             recipient_id: memberId,
             subject: `Inquiry from ${currentUser.name} - ${organization?.name}`,
-            content: `Hi ${memberName},\n\nI came across ${organization?.name}'s profile and would love to connect regarding potential speaking opportunities.\n\nBest regards,\n${currentUser.name}`,
-            status: 'sent'
+            message: `Hi ${memberName},\n\nI came across ${organization?.name}'s profile and would love to connect regarding potential speaking opportunities.\n\nBest regards,\n${currentUser.name}`,
+            status: 'unread'
           })
 
         if (error) throw error
