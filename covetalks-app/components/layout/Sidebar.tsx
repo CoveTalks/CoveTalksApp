@@ -46,7 +46,7 @@ const speakerNavItems = [
 const organizationNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/opportunities', label: 'My Opportunities', icon: Briefcase },
-  { href: '/opportunities/new', label: 'Post Opportunity', icon: Plus },
+  { href: '/opportunities/create', label: 'Post Opportunity', icon: Plus },
   { href: '/speakers', label: 'Browse Speakers', icon: Users },
   { href: '/applications', label: 'Applications', icon: FileText },
   { href: '/messages', label: 'Messages', icon: MessageSquare },
@@ -149,8 +149,25 @@ export default function Sidebar({ userType, userName, userEmail }: SidebarProps)
           <ul className="space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon
-              const isActive = pathname === item.href || 
-                (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'))
+              
+              // FIXED: Better active state detection
+              const isActive = (() => {
+                // Check if there's an exact match for the current path in our nav items
+                const exactMatchExists = navItems.some(navItem => pathname === navItem.href)
+                
+                if (exactMatchExists) {
+                  // If there's an exact match, only highlight that exact item
+                  return pathname === item.href
+                } else {
+                  // If no exact match, check if this item is a parent of the current path
+                  // Don't do this for dashboard - it should only match exactly
+                  if (item.href !== '/dashboard' && pathname.startsWith(item.href + '/')) {
+                    return true
+                  }
+                }
+                
+                return false
+              })()
               
               return (
                 <li key={item.href}>

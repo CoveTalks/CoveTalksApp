@@ -227,37 +227,41 @@ export default function ProfileSetupPage() {
 
       // FIXED: Load organization data if applicable
       if (memberData.member_type === 'Organization') {
-        // Find organization through organization_members table
-        const { data: memberOrg } = await supabase
-          .from('organization_members')
-          .select('organization_id')
-          .eq('member_id', user.id)
-          .single()
+        try {
+          // Find organization through organization_members table
+          const { data: memberOrg, error: memberOrgError } = await supabase
+            .from('organization_members')
+            .select('organization_id')
+            .eq('member_id', user.id)
+            .maybeSingle()
 
-        if (memberOrg) {
-          const { data: orgData } = await supabase
-            .from('organizations')
-            .select('*')
-            .eq('id', memberOrg.organization_id)
-            .single()
+          if (memberOrg && !memberOrgError) {
+            const { data: orgData } = await supabase
+              .from('organizations')
+              .select('*')
+              .eq('id', memberOrg.organization_id)
+              .single()
 
-          if (orgData) {
-            updates.organizationName = orgData.name || memberData.name
-            updates.organizationType = orgData.organization_type || '' // FIXED: organization_type not type
-            updates.industry = orgData.industry || ''
-            updates.taxId = orgData.tax_id || ''
-            updates.employeeCount = orgData.employee_count || ''
-            updates.eventTypes = orgData.event_types || []
-            updates.eventFrequency = orgData.event_frequency || ''
-            updates.averageAudienceSize = orgData.average_audience_size || ''
-            updates.typicalBudget = orgData.typical_budget || ''
-            updates.venueTypes = orgData.venue_types || []
-            updates.preferredTopics = orgData.preferred_topics || []
-            updates.missionStatement = orgData.mission_statement || ''
-            updates.pastSpeakers = orgData.past_speakers || ''
-            updates.speakerRequirements = orgData.speaker_requirements || ''
-            setSelectedOrganization(orgData) // Mark as selected if already linked
+            if (orgData) {
+              updates.organizationName = orgData.name || memberData.name
+              updates.organizationType = orgData.organization_type || ''
+              updates.industry = orgData.industry || ''
+              updates.taxId = orgData.tax_id || ''
+              updates.employeeCount = orgData.employee_count || ''
+              updates.eventTypes = orgData.event_types || []
+              updates.eventFrequency = orgData.event_frequency || ''
+              updates.averageAudienceSize = orgData.average_audience_size || ''
+              updates.typicalBudget = orgData.typical_budget || ''
+              updates.venueTypes = orgData.venue_types || []
+              updates.preferredTopics = orgData.preferred_topics || []
+              updates.missionStatement = orgData.mission_statement || ''
+              updates.pastSpeakers = orgData.past_speakers || ''
+              updates.speakerRequirements = orgData.speaker_requirements || ''
+              setSelectedOrganization(orgData)
+            }
           }
+        } catch (err) {
+          console.log('Could not pre-load organization data:', err)
         }
       }
       
@@ -436,8 +440,13 @@ export default function ProfileSetupPage() {
             return false
           }
         } else {
+          // Organization validation - NOW INCLUDING organizationType
           if (!formData.organizationName || formData.organizationName.trim() === '') {
             setError('Please provide organization name')
+            return false
+          }
+          if (!formData.organizationType || formData.organizationType === '') {
+            setError('Please select organization type')
             return false
           }
           if (!formData.location || formData.location.trim() === '') {
@@ -455,10 +464,8 @@ export default function ProfileSetupPage() {
             return false
           }
         } else {
-          if (!formData.organizationType || formData.organizationType === '') {
-            setError('Please select organization type')
-            return false
-          }
+          // Organization type is now validated in step 1, so step 2 has no required fields
+          return true
         }
         return true
         
@@ -562,6 +569,12 @@ export default function ProfileSetupPage() {
       // If they selected an existing organization, just ensure the link exists
       if (selectedOrganization) {
         // Already linked in selectExistingOrganization
+        return
+      }
+
+      // Only save organization if we have the required fields (name and type)
+      if (!formData.organizationName || !formData.organizationType) {
+        console.log('Skipping organization save - required fields not yet filled')
         return
       }
 
@@ -1432,18 +1445,44 @@ export default function ProfileSetupPage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Organization Name *
-              </label>
-              <input
-                type="text"
-                value={formData.organizationName}
-                onChange={(e) => handleInputChange('organizationName', e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
-                placeholder="Your organization name"
-                disabled={selectedOrganization !== null}
-              />
+            {/* MODIFIED: Organization Name and Type in a grid */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Organization Name *
+                </label>
+                <input
+                  type="text"
+                  value={formData.organizationName}
+                  onChange={(e) => handleInputChange('organizationName', e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                  placeholder="Your organization name"
+                  disabled={selectedOrganization !== null}
+                />
+              </div>
+
+              {/* MOVED FROM STEP 2 TO STEP 1 */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Organization Type *
+                </label>
+                <select
+                  value={formData.organizationType}
+                  onChange={(e) => handleInputChange('organizationType', e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                  disabled={selectedOrganization !== null}
+                >
+                  <option value="">Select type</option>
+                  <option value="Non-Profit">Non-Profit</option>
+                  <option value="Educational">Educational</option>
+                  <option value="Government">Government</option>
+                   <option value="Corporate">Corporate</option>                   
+                  <option value="Religious">Religious</option>                  
+                  <option value="Community">Community</option>
+                  <option value="Healthcare">Healthcare</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
             </div>
 
             <div>
@@ -1524,39 +1563,18 @@ export default function ProfileSetupPage() {
             <h2 className="text-2xl font-bold text-gray-900">Organization Details</h2>
             <p className="text-gray-600">Help speakers understand your organization better.</p>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Organization Type *
-                </label>
-                <select
-                  value={formData.organizationType}
-                  onChange={(e) => handleInputChange('organizationType', e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
-                  disabled={selectedOrganization !== null}
-                >
-                  <option value="">Select type</option>
-                  <option value="Corporate">Corporate</option>
-                  <option value="Non-Profit">Non-Profit</option>
-                  <option value="Educational">Educational</option>
-                  <option value="Government">Government</option>
-                  <option value="Association">Association</option>
-                  <option value="Religious">Religious</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Industry
-                </label>
-                <input
-                  type="text"
-                  value={formData.industry}
-                  onChange={(e) => handleInputChange('industry', e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
-                  placeholder="e.g., Technology, Healthcare, Finance"
-                />
-              </div>
+            {/* MODIFIED: Removed Organization Type, now only Industry */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Industry
+              </label>
+              <input
+                type="text"
+                value={formData.industry}
+                onChange={(e) => handleInputChange('industry', e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                placeholder="e.g., Technology, Healthcare, Finance"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
