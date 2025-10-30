@@ -116,10 +116,23 @@ export default function BrowseSpeakersPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
+      // Get the organization ID for this member
+      const { data: orgMember, error: orgError } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('member_id', user.id)
+        .single()
+
+      if (orgError || !orgMember) {
+        console.error('User is not part of an organization')
+        return
+      }
+
+      // Now fetch saved speakers using the correct organization_id
       const { data, error } = await supabase
         .from('saved_speakers')
         .select('speaker_id')
-        .eq('organization_id', user.id)
+        .eq('organization_id', orgMember.organization_id) // ✅ Using actual organization ID
 
       if (error) throw error
 
@@ -140,12 +153,24 @@ export default function BrowseSpeakersPage() {
         return
       }
 
+      // Get the organization ID for this member
+      const { data: orgMember, error: orgError } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('member_id', user.id)
+        .single()
+
+      if (orgError || !orgMember) {
+        alert('You must be part of an organization to save speakers')
+        return
+      }
+
       if (savedSpeakers.has(speakerId)) {
         // Unsave
         const { error } = await supabase
           .from('saved_speakers')
           .delete()
-          .eq('organization_id', user.id)
+          .eq('organization_id', orgMember.organization_id) // ✅ Using actual organization ID
           .eq('speaker_id', speakerId)
 
         if (error) throw error
@@ -160,7 +185,7 @@ export default function BrowseSpeakersPage() {
         const { error } = await supabase
           .from('saved_speakers')
           .insert({
-            organization_id: user.id,
+            organization_id: orgMember.organization_id, // ✅ Using actual organization ID
             speaker_id: speakerId,
           })
 

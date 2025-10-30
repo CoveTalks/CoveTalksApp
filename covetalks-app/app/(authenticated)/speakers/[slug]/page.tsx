@@ -191,20 +191,31 @@ export default function SpeakerProfilePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Check if saved_speakers table exists and has proper access
+      // Get the organization ID for this member
+      const { data: orgMember, error: orgError } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('member_id', user.id)
+        .maybeSingle()
+
+      if (!orgMember) {
+        // User is not part of an organization (might be a speaker)
+        return
+      }
+
+      // Check if saved using the correct organization_id
       const { data, error } = await supabase
         .from('saved_speakers')
         .select('id')
-        .eq('organization_id', user.id)
+        .eq('organization_id', orgMember.organization_id) // ✅ Using actual organization ID
         .eq('speaker_id', speaker.id)
-        .maybeSingle() // Use maybeSingle instead of single to avoid errors if not found
+        .maybeSingle()
 
       if (!error && data) {
         setIsSaved(true)
       }
     } catch (error) {
       console.error('Error checking saved status:', error)
-      // If saved_speakers doesn't exist or has issues, just continue
     }
   }
 
@@ -220,16 +231,28 @@ export default function SpeakerProfilePage() {
         return
       }
 
+      // Get the organization ID for this member
+      const { data: orgMember, error: orgError } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('member_id', user.id)
+        .single()
+
+      if (orgError || !orgMember) {
+        alert('You must be part of an organization to save speakers')
+        return
+      }
+
       if (isSaved) {
         const { error } = await supabase
           .from('saved_speakers')
           .delete()
-          .eq('organization_id', user.id)
+          .eq('organization_id', orgMember.organization_id) // ✅ Using actual organization ID
           .eq('speaker_id', speaker.id)
 
         if (error) {
           console.error('Error unsaving speaker:', error)
-          alert('Unable to unsave speaker. The saved speakers feature may not be available yet.')
+          alert('Unable to unsave speaker.')
         } else {
           setIsSaved(false)
         }
@@ -237,13 +260,13 @@ export default function SpeakerProfilePage() {
         const { error } = await supabase
           .from('saved_speakers')
           .insert({
-            organization_id: user.id,
+            organization_id: orgMember.organization_id, // ✅ Using actual organization ID
             speaker_id: speaker.id,
           })
 
         if (error) {
           console.error('Error saving speaker:', error)
-          alert('Unable to save speaker. The saved speakers feature may not be available yet.')
+          alert('Unable to save speaker.')
         } else {
           setIsSaved(true)
         }

@@ -5,10 +5,10 @@ import { createClient } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
 
 // Import both versions
-import SpeakerOpportunitiesView from './savedSpeakers'
-import OrganizationOpportunitiesView from './savedOrganizations'
+import SavedSpeakersView from './savedSpeakers'
+import SavedOrganizationsView from './savedOrganizations'
 
-export default function OpportunitiesPage() {
+export default function SavedPage() {
   const [memberType, setMemberType] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
@@ -47,17 +47,18 @@ export default function OpportunitiesPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="animate-spin h-12 w-12 mx-auto text-calm mb-4" />
-          <p className="text-gray-600">Loading opportunities...</p>
+          <p className="text-gray-600">Loading saved items...</p>
         </div>
       </div>
     )
   }
 
   // Route to the appropriate view
-  if (memberType === 'Speaker') {
-    return <SpeakerOpportunitiesView />
-  } else if (memberType === 'Organization') {
-    return <OrganizationOpportunitiesView />
+  // Organizations view saved speakers, Speakers view saved organizations
+  if (memberType === 'Organization') {
+    return <SavedSpeakersView />
+  } else if (memberType === 'Speaker') {
+    return <SavedOrganizationsView />
   } else {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
