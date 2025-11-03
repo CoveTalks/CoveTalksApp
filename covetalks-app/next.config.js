@@ -1,20 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // ========================================
-  // NETLIFY DEPLOYMENT CONFIGURATION
+  // VERCEL DEPLOYMENT - TURBOPACK ENABLED
   // ========================================
   
-  // Use Webpack for production builds (Turbopack for dev only)
-  // Turbopack is not fully compatible with Netlify yet
+  // Turbopack is the default bundler in Next.js 16
+  // It's 700x faster than Webpack for large apps
   
   // ========================================
   // DEVELOPMENT & PERFORMANCE
   // ========================================
   
-  // Enable React strict mode for better development experience
   reactStrictMode: true,
-  
-  // Remove X-Powered-By header for security
   poweredByHeader: false,
   
   // ========================================
@@ -22,7 +19,6 @@ const nextConfig = {
   // ========================================
   
   images: {
-    // Remote patterns for external images (Next.js 16+ only supports remotePatterns)
     remotePatterns: [
       {
         protocol: 'https',
@@ -31,7 +27,7 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'lh3.googleusercontent.com', // Google profile images
+        hostname: 'lh3.googleusercontent.com',
       },
       {
         protocol: 'https',
@@ -41,12 +37,12 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'covetalks.com',
       },
+      {
+        protocol: 'https',
+        hostname: '*.vercel.app', // Add Vercel preview URLs
+      },
     ],
-    
-    // Modern image formats for better performance
     formats: ['image/avif', 'image/webp'],
-    
-    // Image optimization settings
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
@@ -56,18 +52,15 @@ const nextConfig = {
   // ========================================
   
   experimental: {
-    // Enable server actions for form handling
     serverActions: {
       bodySizeLimit: '2mb',
       allowedOrigins: [
         'app.covetalks.com',
         'covetalks.com',
         'localhost:3001',
-        'covetalksapp.netlify.app',
+        '*.vercel.app', // Allow Vercel preview deployments
       ],
     },
-    
-    // Optimize package imports (reduces bundle size)
     optimizePackageImports: [
       'lucide-react',
       '@radix-ui/react-icons',
@@ -75,25 +68,24 @@ const nextConfig = {
   },
   
   // ========================================
+  // TURBOPACK CONFIGURATION
+  // ========================================
+  
+  // Empty config enables Turbopack with defaults
+  // Turbopack handles:
+  // - Tree shaking
+  // - Code splitting
+  // - Hot Module Replacement (HMR)
+  // - Incremental compilation
+  turbopack: {},
+  
+  // ========================================
   // BUILD-TIME CHECKING
   // ========================================
   
-  // TypeScript configuration
   typescript: {
-    // Fail build on TypeScript errors (recommended for production)
     ignoreBuildErrors: false,
-    
-    // Use project tsconfig.json
     tsconfigPath: './tsconfig.json',
-  },
-  
-  // ========================================
-  // WEBPACK CONFIGURATION
-  // ========================================
-  
-  // Ensure Webpack is used for production builds
-  webpack: (config, { isServer }) => {
-    return config
   },
   
   // ========================================
@@ -103,7 +95,6 @@ const nextConfig = {
   async headers() {
     return [
       {
-        // Apply to all routes
         source: '/:path*',
         headers: [
           {
@@ -137,7 +128,6 @@ const nextConfig = {
         ],
       },
       {
-        // API routes should never be cached
         source: '/api/:path*',
         headers: [
           {
@@ -156,14 +146,11 @@ const nextConfig = {
   async redirects() {
     return [
       {
-        // Redirect root to dashboard for authenticated users
-        // (The actual auth check happens in middleware)
         source: '/',
         destination: '/dashboard',
         permanent: false,
       },
       {
-        // Legacy URL compatibility
         source: '/app',
         destination: '/dashboard',
         permanent: false,
@@ -175,9 +162,7 @@ const nextConfig = {
   // PRODUCTION OPTIMIZATIONS
   // ========================================
   
-  // Compiler optimizations (compatible with Webpack)
   compiler: {
-    // Remove console.log in production (keep errors and warnings)
     removeConsole: process.env.NODE_ENV === 'production' ? {
       exclude: ['error', 'warn', 'info'],
     } : false,
@@ -187,7 +172,6 @@ const nextConfig = {
   // ENVIRONMENT VARIABLES (Public)
   // ========================================
   
-  // These are exposed to the browser
   env: {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'https://app.covetalks.com',
     NEXT_PUBLIC_MARKETING_URL: process.env.NEXT_PUBLIC_MARKETING_URL || 'https://covetalks.com',
@@ -199,28 +183,24 @@ const nextConfig = {
   // PAGE EXTENSIONS
   // ========================================
   
-  // Files that should be treated as pages
   pageExtensions: ['tsx', 'ts', 'jsx', 'js', 'md', 'mdx'],
   
   // ========================================
   // TRAILING SLASH
   // ========================================
   
-  // Don't add trailing slashes to URLs
   trailingSlash: false,
   
   // ========================================
   // COMPRESSION
   // ========================================
   
-  // Enable gzip compression (Netlify handles this, but good to have)
   compress: true,
   
   // ========================================
   // LOGGING (Development)
   // ========================================
   
-  // Better logging in development
   logging: {
     fetches: {
       fullUrl: true,
