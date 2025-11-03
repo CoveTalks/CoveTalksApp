@@ -1,110 +1,26 @@
-'use client'
+import { Suspense } from 'react'
+import ConfirmContent from './ConfirmContent'
 
-import { useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+export const dynamic = 'force-dynamic'
 
 export default function ConfirmPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const supabase = createClient()
-  
-  useEffect(() => {
-    const handleConfirmation = async () => {
-      // Get all parameters
-      const token = searchParams.get('token')
-      const type = searchParams.get('type')
-      const next = searchParams.get('next')
-      
-      // DEBUG: Log what we received
-      console.log('=== CONFIRM PAGE DEBUG ===')
-      console.log('Received parameters:')
-      console.log('  token:', token ? `${token.substring(0, 20)}...` : 'MISSING')
-      console.log('  type:', type || 'MISSING')
-      console.log('  next:', next || 'MISSING')
-      console.log('Decoded next:', next ? decodeURIComponent(next) : 'N/A')
-      console.log('=========================')
-      
-      if (!token) {
-        console.error('❌ No token provided')
-        router.push('/auth/login?error=missing_token')
-        return
-      }
-      
-      try {
-        // Try to verify the magic link
-        console.log('🔄 Verifying magic link token...')
-        const { data, error } = await supabase.auth.verifyOtp({
-          token_hash: token,
-          type: type as 'magiclink' | 'email',
-        })
-        
-        if (error) {
-          console.error('❌ verifyOtp failed:', error.message)
-          
-          // Try alternative method
-          console.log('🔄 Trying exchangeCodeForSession...')
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(token)
-          
-          if (exchangeError) {
-            console.error('❌ exchangeCodeForSession also failed:', exchangeError.message)
-            router.push('/auth/login?error=invalid_token')
-            return
-          }
-        }
-        
-        console.log('✅ Authentication successful')
-        
-        // Wait for session to be established
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        // Verify we have a session
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
-          console.error('❌ No user in session after auth')
-          router.push('/auth/login?error=session_failed')
-          return
-        }
-        
-        console.log('✅ Session established for:', user.email)
-        
-        // CRITICAL: Use the next parameter if provided
-        const redirectTo = next || '/dashboard'
-        
-        console.log('=== REDIRECT DECISION ===')
-        console.log('next parameter:', next)
-        console.log('Will redirect to:', redirectTo)
-        console.log('========================')
-        
-        // Perform the redirect
-        router.push(redirectTo)
-        
-      } catch (error: any) {
-        console.error('❌ Unexpected error:', error)
-        router.push('/auth/login?error=confirmation_failed')
-      }
-    }
-    
-    // Run the confirmation
-    handleConfirmation()
-  }, [router, searchParams, supabase])
-  
   return (
-    <div className="min-h-screen bg-gradient-soft flex items-center justify-center">
-      <div className="text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-soft flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Loading...
+          </h2>
+          <p className="text-gray-600">
+            Please wait
+          </p>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Confirming your account...
-        </h2>
-        <p className="text-gray-600">
-          Please wait while we set up your session
-        </p>
-        <p className="text-xs text-gray-400 mt-4">
-          (Check console for debug information)
-        </p>
       </div>
-    </div>
+    }>
+      <ConfirmContent />
+    </Suspense>
   )
 }
