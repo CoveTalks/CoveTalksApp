@@ -4,8 +4,8 @@ const nextConfig = {
   // NETLIFY DEPLOYMENT CONFIGURATION
   // ========================================
   
-  // REMOVED: output: 'standalone' causes issues with Netlify + Next.js 16
-  // Netlify plugin handles deployment without this setting
+  // Use Webpack for production builds (Turbopack for dev only)
+  // Turbopack is not fully compatible with Netlify yet
   
   // ========================================
   // DEVELOPMENT & PERFORMANCE
@@ -74,14 +74,6 @@ const nextConfig = {
   },
   
   // ========================================
-  // TURBOPACK CONFIGURATION (Next.js 16+)
-  // ========================================
-  
-  // Empty turbopack config to silence warnings and use defaults
-  // Next.js 16 uses Turbopack by default, no additional config needed
-  turbopack: {},
-  
-  // ========================================
   // BUILD-TIME CHECKING
   // ========================================
   
@@ -92,6 +84,15 @@ const nextConfig = {
     
     // Use project tsconfig.json
     tsconfigPath: './tsconfig.json',
+  },
+  
+  // ========================================
+  // WEBPACK CONFIGURATION
+  // ========================================
+  
+  // Ensure Webpack is used for production builds
+  webpack: (config, { isServer }) => {
+    return config
   },
   
   // ========================================
@@ -170,24 +171,10 @@ const nextConfig = {
   },
   
   // ========================================
-  // REWRITES (Optional - for API proxying)
-  // ========================================
-  
-  // Uncomment if you need to proxy API requests
-  // async rewrites() {
-  //   return [
-  //     {
-  //       source: '/api/supabase/:path*',
-  //       destination: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/:path*`,
-  //     },
-  //   ]
-  // },
-  
-  // ========================================
   // PRODUCTION OPTIMIZATIONS
   // ========================================
   
-  // Compiler optimizations (compatible with Turbopack)
+  // Compiler optimizations (compatible with Webpack)
   compiler: {
     // Remove console.log in production (keep errors and warnings)
     removeConsole: process.env.NODE_ENV === 'production' ? {
