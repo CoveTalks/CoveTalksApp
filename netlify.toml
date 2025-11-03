@@ -18,18 +18,20 @@
 # REDIRECTS - ORDER MATTERS!
 # ====================================
 
-# API routes - route to Next.js server handler with full path
+# API routes must come FIRST and NOT redirect to functions
+# The Next.js handler will handle them
 [[redirects]]
-  from = "/api/:path*"
+  from = "/api/*"
   to = "/.netlify/functions/___netlify-server-handler"
   status = 200
-  force = true
+  force = false
 
 # Catch-all for Next.js pages
 [[redirects]]
   from = "/*"
-  to = "/.netlify/functions/___netlify-server-handler"
+  to = "/index.html"
   status = 200
+  conditions = { }
 
 # ====================================
 # SECURITY HEADERS
