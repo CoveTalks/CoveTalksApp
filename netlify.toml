@@ -1,45 +1,35 @@
 # Netlify Configuration for CoveTalksApp
-# Place this file in the root of your covetalks-app repository
 
 [build]
-  # Build command - runs your Next.js build
+  # Base directory - where your Next.js app lives
+  base = "covetalks-app"
+  
+  # Build command
   command = "npm run build"
   
-  # Publish directory - where Next.js outputs build files
+  # Publish directory - relative to base directory
   publish = ".next"
-  
-  # Base directory (if your app is in a subdirectory, otherwise leave empty)
-  # base = ""
 
 [build.environment]
-  # Node version
-  NODE_VERSION = "22.18.0"
+  # Node version (using 20.x for better Netlify compatibility with Next.js 16)
+  NODE_VERSION = "20.11.0"
   
   # Disable Next.js telemetry for faster builds
   NEXT_TELEMETRY_DISABLED = "1"
   
-  # Enable proper build caching
+  # NPM flags for dependency resolution
   NPM_FLAGS = "--legacy-peer-deps"
+  
+  # Set production environment
+  NODE_ENV = "production"
 
 # Essential Netlify plugin for Next.js
-# This handles server-side rendering, API routes, and more
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Redirect rules for proper SPA routing
-# These ensure Next.js routing works correctly
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = false
-  conditions = {Role = ["admin"]}
-
-# API routes should not be redirected
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
+# ====================================
+# SECURITY HEADERS
+# ====================================
 
 # Security headers for all pages
 [[headers]]
@@ -62,20 +52,23 @@
     
     # Strict Transport Security (HTTPS only)
     Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    
+    # DNS prefetch control
+    X-DNS-Prefetch-Control = "on"
 
-# Special cache control for API routes
+# API routes - never cache
 [[headers]]
   for = "/api/*"
   [headers.values]
     # Never cache API responses
     Cache-Control = "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
     
-    # CORS headers (adjust as needed)
+    # CORS headers
     Access-Control-Allow-Origin = "https://covetalks.com"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
 
-# Cache static assets aggressively
+# Cache Next.js static assets aggressively
 [[headers]]
   for = "/_next/static/*"
   [headers.values]
@@ -93,32 +86,58 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Context-specific builds (optional)
-# Use these to have different builds for production vs staging
+# ====================================
+# REDIRECTS
+# ====================================
+
+# API routes redirect to Netlify Functions
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Admin role-based redirect (if using role-based access)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
+  conditions = {Role = ["admin"]}
+
+# ====================================
+# FUNCTIONS CONFIGURATION
+# ====================================
+
+[functions]
+  # Directory for custom Netlify Functions
+  directory = "netlify/functions"
+  
+  # Use esbuild for faster function bundling
+  node_bundler = "esbuild"
+
+# ====================================
+# CONTEXT-SPECIFIC BUILDS
+# ====================================
 
 # Production context
 [context.production]
-  environment = { NODE_ENV = "production" }
+  [context.production.environment]
+    NODE_ENV = "production"
 
-# Deploy Preview context (PRs)
+# Deploy Preview context (for Pull Requests)
 [context.deploy-preview]
-  environment = { NODE_ENV = "development" }
+  [context.deploy-preview.environment]
+    NODE_ENV = "development"
 
-# Branch deploy context (for testing branches)
+# Branch deploy context (for feature branches)
 [context.branch-deploy]
-  environment = { NODE_ENV = "development" }
+  [context.branch-deploy.environment]
+    NODE_ENV = "development"
 
-# Functions configuration (if using Netlify Functions)
-[functions]
-  # Directory for Netlify Functions (if you add any custom ones)
-  directory = "netlify/functions"
-  
-  # Increase timeout for long-running functions
-  # Default is 10 seconds, max is 26 seconds on free tier
-  # Max is 60 seconds on pro tier
-  node_bundler = "esbuild"
+# ====================================
+# LOCAL DEVELOPMENT (Netlify Dev)
+# ====================================
 
-# Development settings for Netlify Dev (local development)
 [dev]
   # Command to run locally with Netlify Dev
   command = "npm run dev"
@@ -126,7 +145,7 @@
   # Port for local development
   port = 3001
   
-  # Port for Netlify Dev proxy
+  # Target port for the app
   targetPort = 3001
   
   # Auto-open browser
