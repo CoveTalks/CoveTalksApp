@@ -1,11 +1,7 @@
-// proxy.ts - Next.js 16 replacement for middleware.ts
-// Place this file in the root of your covetalks-app directory (same level as app/)
-
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// CRITICAL: Function must be named "proxy" for Next.js 16
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: {
       headers: request.headers,
