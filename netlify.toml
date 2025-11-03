@@ -7,20 +7,14 @@
   # Build command
   command = "npm run build"
   
-  # Publish directory - relative to base directory
-  publish = ".next"
+  # CRITICAL FIX: Don't specify publish directory for Next.js with @netlify/plugin-nextjs
+  # The plugin handles this automatically
+  # publish = ".next"  # REMOVE THIS LINE
 
 [build.environment]
-  # Node version (using 20.x for better Netlify compatibility with Next.js 16)
   NODE_VERSION = "20.11.0"
-  
-  # Disable Next.js telemetry for faster builds
   NEXT_TELEMETRY_DISABLED = "1"
-  
-  # NPM flags for dependency resolution
   NPM_FLAGS = "--legacy-peer-deps"
-  
-  # Set production environment
   NODE_ENV = "production"
 
 # Essential Netlify plugin for Next.js
@@ -31,56 +25,35 @@
 # SECURITY HEADERS
 # ====================================
 
-# Security headers for all pages
 [[headers]]
   for = "/*"
   [headers.values]
-    # Prevent clickjacking
     X-Frame-Options = "DENY"
-    
-    # Prevent MIME type sniffing
     X-Content-Type-Options = "nosniff"
-    
-    # Enable XSS protection
     X-XSS-Protection = "1; mode=block"
-    
-    # Control referrer information
     Referrer-Policy = "strict-origin-when-cross-origin"
-    
-    # Feature policy (restrict access to browser features)
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    
-    # Strict Transport Security (HTTPS only)
     Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
-    
-    # DNS prefetch control
     X-DNS-Prefetch-Control = "on"
 
-# API routes - never cache
 [[headers]]
   for = "/api/*"
   [headers.values]
-    # Never cache API responses
     Cache-Control = "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
-    
-    # CORS headers
     Access-Control-Allow-Origin = "https://covetalks.com"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
 
-# Cache Next.js static assets aggressively
 [[headers]]
   for = "/_next/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Cache images
 [[headers]]
   for = "/images/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Cache fonts
 [[headers]]
   for = "/fonts/*"
   [headers.values]
@@ -90,66 +63,33 @@
 # REDIRECTS
 # ====================================
 
-# API routes redirect to Netlify Functions
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
-# Admin role-based redirect (if using role-based access)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = false
-  conditions = {Role = ["admin"]}
+# Note: Removed the admin redirect as it may interfere with routing
 
 # ====================================
 # FUNCTIONS CONFIGURATION
 # ====================================
 
 [functions]
-  # Directory for custom Netlify Functions
   directory = "netlify/functions"
-  
-  # Use esbuild for faster function bundling
   node_bundler = "esbuild"
 
 # ====================================
 # CONTEXT-SPECIFIC BUILDS
 # ====================================
 
-# Production context
 [context.production]
   [context.production.environment]
     NODE_ENV = "production"
 
-# Deploy Preview context (for Pull Requests)
 [context.deploy-preview]
   [context.deploy-preview.environment]
     NODE_ENV = "development"
 
-# Branch deploy context (for feature branches)
 [context.branch-deploy]
   [context.branch-deploy.environment]
     NODE_ENV = "development"
-
-# ====================================
-# LOCAL DEVELOPMENT (Netlify Dev)
-# ====================================
-
-[dev]
-  # Command to run locally with Netlify Dev
-  command = "npm run dev"
-  
-  # Port for local development
-  port = 3001
-  
-  # Target port for the app
-  targetPort = 3001
-  
-  # Auto-open browser
-  autoLaunch = true
-  
-  # Framework detection
-  framework = "#custom"
