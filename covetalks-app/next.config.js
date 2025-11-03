@@ -63,6 +63,7 @@ const nextConfig = {
         'app.covetalks.com',
         'covetalks.com',
         'localhost:3001',
+        'covetalksapp.netlify.app',
       ],
     },
     
