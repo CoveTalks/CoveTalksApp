@@ -157,17 +157,21 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Auto-login error:', error)
     
-    // Log error for debugging (optional)
-    await supabaseAdmin
-      .from('auth_errors')
-      .insert({
-        error_type: 'auto_login_failed',
-        error_message: error.message,
-        error_stack: error.stack,
-        token: token.substring(0, 20) + '...',
-        timestamp: new Date().toISOString()
-      })
-      .catch(console.error) // Don't fail if logging fails
+    // Log error for debugging (optional) - handle the promise properly
+    try {
+      await supabaseAdmin
+        .from('auth_errors')
+        .insert({
+          error_type: 'auto_login_failed',
+          error_message: error.message,
+          error_stack: error.stack,
+          token: token.substring(0, 20) + '...',
+          timestamp: new Date().toISOString()
+        })
+    } catch (logError) {
+      // Silently ignore logging errors
+      console.error('Failed to log error:', logError)
+    }
     
     return NextResponse.redirect(new URL('/auth/login?error=auto_login_failed', request.url))
   }

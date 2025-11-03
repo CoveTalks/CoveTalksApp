@@ -298,7 +298,7 @@ export default function SavedSpeakersPage() {
   )).sort()
 
   const allLocations = Array.from(new Set(
-    savedSpeakers.map(s => s.speaker.location).filter(Boolean)
+    savedSpeakers.map(s => s.speaker.location).filter((loc): loc is string => loc !== null)
   )).sort()
 
   if (loading) {

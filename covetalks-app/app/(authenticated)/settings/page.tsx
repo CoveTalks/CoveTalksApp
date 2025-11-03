@@ -64,58 +64,16 @@ interface BillingHistory {
   card_brand?: string
 }
 
-const PLANS = {
-  Free: {
-    name: 'Free',
-    monthly: 0,
-    yearly: 0,
-    features: [
-      'Basic profile',
-      '5 applications per month',
-      'Basic search filters',
-      'Email support'
-    ]
-  },
-  Standard: {
-    name: 'Standard',
-    monthly: 97,
-    yearly: 997,
-    features: [
-      'Everything in Free',
-      'Unlimited applications',
-      'Advanced search filters',
-      'Priority support',
-      'Featured profile badge',
-      'Speaking opportunity alerts'
-    ]
-  },
-  Plus: {
-    name: 'Plus',
-    monthly: 147,
-    yearly: 1497,
-    features: [
-      'Everything in Standard',
-      'Priority listing',
-      'Analytics dashboard',
-      'Booking management tools',
-      'Custom speaker tags',
-      'Phone support'
-    ],
-    popular: true
-  },
-  Premium: {
-    name: 'Premium',
-    monthly: 197,
-    yearly: 1997,
-    features: [
-      'Everything in Plus',
-      'Top search placement',
-      'Dedicated account manager',
-      'API access',
-      'White-label options',
-      'Premium opportunities'
-    ]
-  }
+interface Plan {
+  name: string
+  monthly: number
+  yearly: number
+  popular: boolean
+  features: string[]
+}
+
+interface StripePrices {
+  [key: string]: Plan
 }
 
 export default function SettingsPage() {
@@ -124,6 +82,8 @@ export default function SettingsPage() {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
   const [billingHistory, setBillingHistory] = useState<BillingHistory[]>([])
+  const [stripePrices, setStripePrices] = useState<StripePrices | null>(null)
+  const [loadingPrices, setLoadingPrices] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [changingPlan, setChangingPlan] = useState(false)
@@ -145,6 +105,7 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchSettings()
     fetchSubscription()
+    fetchStripePrices()
   }, [])
 
   useEffect(() => {
@@ -154,6 +115,20 @@ export default function SettingsPage() {
       fetchBillingHistory()
     }
   }, [settings])
+
+  async function fetchStripePrices() {
+    try {
+      const response = await fetch('/api/stripe/prices')
+      if (response.ok) {
+        const data = await response.json()
+        setStripePrices(data.prices)
+      }
+    } catch (error) {
+      console.error('Error fetching prices:', error)
+    } finally {
+      setLoadingPrices(false)
+    }
+  }
 
   async function fetchSettings() {
     try {
@@ -442,18 +417,13 @@ export default function SettingsPage() {
   }
 
   async function handleAddPaymentMethod() {
-    if (!settings?.stripe_customer_id) {
-      setMessage({ type: 'error', text: 'Please complete your profile first' })
-      return
-    }
-
     setProcessingPayment(true)
     try {
       const response = await fetch('/api/stripe/create-setup-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customerId: settings.stripe_customer_id
+          customerId: settings?.stripe_customer_id || null
         })
       })
 
@@ -538,18 +508,16 @@ export default function SettingsPage() {
       setMessage({ type: 'success', text: 'Subscription updated successfully!' })
       fetchSubscription()
       fetchPaymentMethods()
-      // Remove query params from URL
       window.history.replaceState({}, '', window.location.pathname)
     }
     if (params.get('payment') === 'success') {
       setMessage({ type: 'success', text: 'Payment method added successfully!' })
       fetchPaymentMethods()
-      // Remove query params from URL
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [])
 
-  if (loading) {
+  if (loading || loadingPrices) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -560,7 +528,7 @@ export default function SettingsPage() {
     )
   }
 
-  if (!settings) {
+  if (!settings || !stripePrices) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-600">Unable to load settings</p>
@@ -575,14 +543,12 @@ export default function SettingsPage() {
     { id: 'security', label: 'Security', icon: Shield },
   ]
 
-  // Only show billing tab for speakers
   if (settings.member_type === 'Speaker') {
     tabs.push({ id: 'billing', label: 'Billing', icon: CreditCard })
   }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-deep">Settings</h1>
         <p className="mt-2 text-gray-600">
@@ -590,7 +556,6 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {/* Message Alert */}
       {message && (
         <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
           message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
@@ -608,7 +573,6 @@ export default function SettingsPage() {
       )}
 
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* Tabs Navigation */}
         <div className="lg:w-1/4">
           <div className="bg-white rounded-lg shadow-md p-4">
             <nav className="space-y-2">
@@ -633,10 +597,8 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Tab Content */}
         <div className="lg:flex-1">
           <div className="bg-white rounded-lg shadow-md p-6">
-            {/* Keep existing Profile, Notifications, Privacy, and Security tabs as-is */}
             {activeTab === 'profile' && (
               <ProfileSettings settings={settings} setSettings={setSettings} saveSettings={saveSettings} saving={saving} />
             )}
@@ -664,265 +626,30 @@ export default function SettingsPage() {
               />
             )}
 
-            {/* Enhanced Billing Tab - Fully Functional */}
             {activeTab === 'billing' && settings.member_type === 'Speaker' && (
-              <div className="space-y-8">
-                <h2 className="text-xl font-bold text-deep">Billing & Subscription</h2>
-                
-                {/* Current Plan Section */}
-                <div className="border rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="font-semibold text-lg">Current Plan</h3>
-                      <p className="text-sm text-gray-600">Manage your subscription and billing</p>
-                    </div>
-                    {subscription?.plan_type !== 'Free' && subscription?.cancel_at_period_end && (
-                      <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
-                        Cancelling at period end
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="bg-foam p-6 rounded-lg mb-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <p className="text-3xl font-bold text-calm">{subscription?.plan_type} Plan</p>
-                        {subscription?.plan_type !== 'Free' && (
-                          <p className="text-gray-600 mt-1">
-                            ${subscription?.amount}/{subscription?.billing_period === 'Yearly' ? 'year' : 'month'}
-                          </p>
-                        )}
-                      </div>
-                      {subscription?.plan_type !== 'Premium' && (
-                        <button
-                          onClick={() => setShowPlanModal(true)}
-                          className="btn btn-primary flex items-center gap-2"
-                        >
-                          <ArrowUpCircle className="h-4 w-4" />
-                          Upgrade Plan
-                        </button>
-                      )}
-                    </div>
-                    
-                    {subscription?.plan_type !== 'Free' && (
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <p>Next billing date: {new Date(subscription?.current_period_end || '').toLocaleDateString()}</p>
-                        {subscription?.cancel_at_period_end && (
-                          <p className="text-yellow-700">Access ends: {new Date(subscription?.current_period_end || '').toLocaleDateString()}</p>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="mt-4 space-y-2">
-                      {PLANS[subscription?.plan_type || 'Free'].features.map((feature, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-sm">
-                          <Check className="h-4 w-4 text-green-600" />
-                          <span>{feature}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {subscription?.plan_type !== 'Free' && (
-                      <div className="mt-6 flex gap-3">
-                        {!subscription?.cancel_at_period_end ? (
-                          <button
-                            onClick={handleCancelSubscription}
-                            disabled={processingPayment}
-                            className="btn btn-outline text-red-600 border-red-600 hover:bg-red-50 flex items-center gap-2"
-                          >
-                            {processingPayment ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Pause className="h-4 w-4" />
-                            )}
-                            Cancel Subscription
-                          </button>
-                        ) : (
-                          <button
-                            onClick={handleReactivateSubscription}
-                            disabled={processingPayment}
-                            className="btn btn-primary flex items-center gap-2"
-                          >
-                            {processingPayment ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <RefreshCw className="h-4 w-4" />
-                            )}
-                            Reactivate Subscription
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Payment Methods Section */}
-                <div className="border rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="font-semibold text-lg">Payment Methods</h3>
-                      <p className="text-sm text-gray-600">Manage your payment methods</p>
-                    </div>
-                    <button
-                      onClick={handleAddPaymentMethod}
-                      disabled={processingPayment}
-                      className="btn btn-outline btn-sm flex items-center gap-2"
-                    >
-                      {processingPayment ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Plus className="h-4 w-4" />
-                      )}
-                      Add Card
-                    </button>
-                  </div>
-
-                  {loadingPaymentMethods ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-                    </div>
-                  ) : paymentMethods.length > 0 ? (
-                    <div className="space-y-3">
-                      {paymentMethods.map((method) => (
-                        <div key={method.id} className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="flex items-center gap-4">
-                            <CreditCard className="h-8 w-8 text-gray-400" />
-                            <div>
-                              <p className="font-medium capitalize">
-                                {method.brand} •••• {method.last4}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                Expires {method.exp_month.toString().padStart(2, '0')}/{method.exp_year}
-                              </p>
-                            </div>
-                            {method.is_default && (
-                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
-                                Default
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {!method.is_default && (
-                              <button
-                                onClick={() => handleSetDefaultPaymentMethod(method.id)}
-                                disabled={processingPayment}
-                                className="text-calm hover:text-deep text-sm"
-                              >
-                                Set Default
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleRemovePaymentMethod(method.id)}
-                              disabled={processingPayment}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-center py-8">
-                      No payment methods on file
-                    </p>
-                  )}
-                </div>
-
-                {/* Billing History Section */}
-                <div className="border rounded-lg p-6">
-                  <div className="mb-4">
-                    <h3 className="font-semibold text-lg">Billing History</h3>
-                    <p className="text-sm text-gray-600">Download invoices and receipts</p>
-                  </div>
-
-                  {billingHistory.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b text-left">
-                            <th className="pb-2 font-medium text-gray-700">Date</th>
-                            <th className="pb-2 font-medium text-gray-700">Description</th>
-                            <th className="pb-2 font-medium text-gray-700">Amount</th>
-                            <th className="pb-2 font-medium text-gray-700">Status</th>
-                            <th className="pb-2 font-medium text-gray-700"></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {billingHistory.map((payment) => (
-                            <tr key={payment.id} className="border-b">
-                              <td className="py-3 text-sm">
-                                {new Date(payment.payment_date).toLocaleDateString()}
-                              </td>
-                              <td className="py-3 text-sm">
-                                {payment.description}
-                                {payment.card_last4 && (
-                                  <span className="text-gray-500 ml-2">
-                                    ({payment.card_brand} •••• {payment.card_last4})
-                                  </span>
-                                )}
-                              </td>
-                              <td className="py-3 text-sm font-medium">
-                                ${payment.amount.toFixed(2)}
-                              </td>
-                              <td className="py-3">
-                                <span className={`px-2 py-1 rounded-full text-xs ${
-                                  payment.status === 'Succeeded' 
-                                    ? 'bg-green-100 text-green-800'
-                                    : payment.status === 'Pending'
-                                    ? 'bg-yellow-100 text-yellow-800'
-                                    : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {payment.status}
-                                </span>
-                              </td>
-                              <td className="py-3 text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  {payment.invoice_url && (
-                                    <a
-                                      href={payment.invoice_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-calm hover:text-deep"
-                                      title="Download Invoice"
-                                    >
-                                      <FileText className="h-4 w-4" />
-                                    </a>
-                                  )}
-                                  {payment.receipt_url && (
-                                    <a
-                                      href={payment.receipt_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-calm hover:text-deep"
-                                      title="Download Receipt"
-                                    >
-                                      <Download className="h-4 w-4" />
-                                    </a>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-center py-8">
-                      No billing history available
-                    </p>
-                  )}
-                </div>
-              </div>
+              <BillingTab
+                subscription={subscription}
+                stripePrices={stripePrices}
+                paymentMethods={paymentMethods}
+                billingHistory={billingHistory}
+                loadingPaymentMethods={loadingPaymentMethods}
+                processingPayment={processingPayment}
+                setShowPlanModal={setShowPlanModal}
+                handleCancelSubscription={handleCancelSubscription}
+                handleReactivateSubscription={handleReactivateSubscription}
+                handleAddPaymentMethod={handleAddPaymentMethod}
+                handleRemovePaymentMethod={handleRemovePaymentMethod}
+                handleSetDefaultPaymentMethod={handleSetDefaultPaymentMethod}
+              />
             )}
           </div>
         </div>
       </div>
 
-      {/* Plan Change Modal */}
       {showPlanModal && (
         <PlanChangeModal
           currentPlan={subscription?.plan_type || 'Free'}
+          stripePrices={stripePrices}
           selectedPlan={selectedPlan}
           setSelectedPlan={setSelectedPlan}
           selectedBilling={selectedBilling}
@@ -939,7 +666,6 @@ export default function SettingsPage() {
   )
 }
 
-// Keep all the component functions the same
 function ProfileSettings({ settings, setSettings, saveSettings, saving }: any) {
   return (
     <div className="space-y-6">
@@ -1269,7 +995,285 @@ function SecuritySettings({ currentPassword, setCurrentPassword, newPassword, se
   )
 }
 
-function PlanChangeModal({ currentPlan, selectedPlan, setSelectedPlan, selectedBilling, setSelectedBilling, onClose, onConfirm, loading }: any) {
+function BillingTab({ 
+  subscription, 
+  stripePrices, 
+  paymentMethods, 
+  billingHistory, 
+  loadingPaymentMethods, 
+  processingPayment,
+  setShowPlanModal,
+  handleCancelSubscription,
+  handleReactivateSubscription,
+  handleAddPaymentMethod,
+  handleRemovePaymentMethod,
+  handleSetDefaultPaymentMethod
+}: any) {
+  const currentPlan = stripePrices[subscription?.plan_type || 'Free']
+
+  return (
+    <div className="space-y-8">
+      <h2 className="text-xl font-bold text-deep">Billing & Subscription</h2>
+      
+      {/* Current Plan Section */}
+      <div className="border rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-semibold text-lg">Current Plan</h3>
+            <p className="text-sm text-gray-600">Manage your subscription and billing</p>
+          </div>
+          {subscription?.plan_type !== 'Free' && subscription?.cancel_at_period_end && (
+            <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
+              Cancelling at period end
+            </span>
+          )}
+        </div>
+
+        <div className="bg-foam p-6 rounded-lg mb-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-3xl font-bold text-calm">{currentPlan?.name} Plan</p>
+              {subscription?.plan_type !== 'Free' && (
+                <p className="text-gray-600 mt-1">
+                  ${subscription?.amount}/{subscription?.billing_period === 'Yearly' ? 'year' : 'month'}
+                </p>
+              )}
+            </div>
+            {subscription?.plan_type !== 'Premium' && (
+              <button
+                onClick={() => setShowPlanModal(true)}
+                className="btn btn-primary flex items-center gap-2"
+              >
+                <ArrowUpCircle className="h-4 w-4" />
+                Upgrade Plan
+              </button>
+            )}
+          </div>
+          
+          {subscription?.plan_type !== 'Free' && (
+            <div className="text-sm text-gray-600 space-y-1">
+              <p>Next billing date: {new Date(subscription?.current_period_end || '').toLocaleDateString()}</p>
+              {subscription?.cancel_at_period_end && (
+                <p className="text-yellow-700">Access ends: {new Date(subscription?.current_period_end || '').toLocaleDateString()}</p>
+              )}
+            </div>
+          )}
+
+          <div className="mt-4 space-y-2">
+            {currentPlan?.features.map((feature: string, idx: number) => (
+              <div key={idx} className="flex items-center gap-2 text-sm">
+                <Check className="h-4 w-4 text-green-600" />
+                <span>{feature}</span>
+              </div>
+            ))}
+          </div>
+
+          {subscription?.plan_type !== 'Free' && (
+            <div className="mt-6 flex gap-3">
+              {!subscription?.cancel_at_period_end ? (
+                <button
+                  onClick={handleCancelSubscription}
+                  disabled={processingPayment}
+                  className="btn btn-outline text-red-600 border-red-600 hover:bg-red-50 flex items-center gap-2"
+                >
+                  {processingPayment ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Pause className="h-4 w-4" />
+                  )}
+                  Cancel Subscription
+                </button>
+              ) : (
+                <button
+                  onClick={handleReactivateSubscription}
+                  disabled={processingPayment}
+                  className="btn btn-primary flex items-center gap-2"
+                >
+                  {processingPayment ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  Reactivate Subscription
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Payment Methods Section */}
+      <div className="border rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-semibold text-lg">Payment Methods</h3>
+            <p className="text-sm text-gray-600">Manage your payment methods</p>
+          </div>
+          <button
+            onClick={handleAddPaymentMethod}
+            disabled={processingPayment}
+            className="btn btn-outline btn-sm flex items-center gap-2"
+          >
+            {processingPayment ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+            Add Card
+          </button>
+        </div>
+
+        {loadingPaymentMethods ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          </div>
+        ) : paymentMethods.length > 0 ? (
+          <div className="space-y-3">
+            {paymentMethods.map((method: any) => (
+              <div key={method.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center gap-4">
+                  <CreditCard className="h-8 w-8 text-gray-400" />
+                  <div>
+                    <p className="font-medium capitalize">
+                      {method.brand} •••• {method.last4}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Expires {method.exp_month.toString().padStart(2, '0')}/{method.exp_year}
+                    </p>
+                  </div>
+                  {method.is_default && (
+                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
+                      Default
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {!method.is_default && (
+                    <button
+                      onClick={() => handleSetDefaultPaymentMethod(method.id)}
+                      disabled={processingPayment}
+                      className="text-calm hover:text-deep text-sm"
+                    >
+                      Set Default
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleRemovePaymentMethod(method.id)}
+                    disabled={processingPayment}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-8">
+            No payment methods on file
+          </p>
+        )}
+      </div>
+
+      {/* Billing History Section */}
+      <div className="border rounded-lg p-6">
+        <div className="mb-4">
+          <h3 className="font-semibold text-lg">Billing History</h3>
+          <p className="text-sm text-gray-600">Download invoices and receipts</p>
+        </div>
+
+        {billingHistory.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b text-left">
+                  <th className="pb-2 font-medium text-gray-700">Date</th>
+                  <th className="pb-2 font-medium text-gray-700">Description</th>
+                  <th className="pb-2 font-medium text-gray-700">Amount</th>
+                  <th className="pb-2 font-medium text-gray-700">Status</th>
+                  <th className="pb-2 font-medium text-gray-700"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {billingHistory.map((payment: any) => (
+                  <tr key={payment.id} className="border-b">
+                    <td className="py-3 text-sm">
+                      {new Date(payment.payment_date).toLocaleDateString()}
+                    </td>
+                    <td className="py-3 text-sm">
+                      {payment.description}
+                      {payment.card_last4 && (
+                        <span className="text-gray-500 ml-2">
+                          ({payment.card_brand} •••• {payment.card_last4})
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 text-sm font-medium">
+                      ${payment.amount.toFixed(2)}
+                    </td>
+                    <td className="py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        payment.status === 'Succeeded' 
+                          ? 'bg-green-100 text-green-800'
+                          : payment.status === 'Pending'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {payment.status}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {payment.invoice_url && (
+                          <a
+                            href={payment.invoice_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-calm hover:text-deep"
+                            title="Download Invoice"
+                          >
+                            <FileText className="h-4 w-4" />
+                          </a>
+                        )}
+                        {payment.receipt_url && (
+                          <a
+                            href={payment.receipt_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-calm hover:text-deep"
+                            title="Download Receipt"
+                          >
+                            <Download className="h-4 w-4" />
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-8">
+            No billing history available
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PlanChangeModal({ 
+  currentPlan, 
+  stripePrices, 
+  selectedPlan, 
+  setSelectedPlan, 
+  selectedBilling, 
+  setSelectedBilling, 
+  onClose, 
+  onConfirm, 
+  loading 
+}: any) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -1312,8 +1316,10 @@ function PlanChangeModal({ currentPlan, selectedPlan, setSelectedPlan, selectedB
 
           {/* Plans Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {(['Standard', 'Plus', 'Premium'] as const).map((planName) => {
-              const plan = PLANS[planName]
+            {['Standard', 'Plus', 'Premium'].map((planName) => {
+              const plan = stripePrices[planName]
+              if (!plan) return null
+              
               const price = selectedBilling === 'Yearly' ? plan.yearly : plan.monthly
               const isCurrentPlan = currentPlan === planName
               const isSelected = selectedPlan === planName
@@ -1351,9 +1357,9 @@ function PlanChangeModal({ currentPlan, selectedPlan, setSelectedPlan, selectedB
                   </p>
 
                   <div className="space-y-2">
-                    {plan.features.map((feature, idx) => (
+                    {plan.features.map((feature: string, idx: number) => (
                       <div key={idx} className="flex items-start gap-2 text-sm">
-                        <Check className="h-4 w-4 text-green-600 mt-0.5" />
+                        <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                         <span>{feature}</span>
                       </div>
                     ))}

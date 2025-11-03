@@ -52,6 +52,12 @@ interface Message {
   }
 }
 
+interface PresenceState {
+  userId: string
+  userName: string
+  isTyping: boolean
+}
+
 interface Conversation {
   participant: {
     id: string
@@ -250,9 +256,9 @@ export default function MessagesPage() {
     const channel = supabase
       .channel(`typing:${channelName}`)
       .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState()
+        const state = channel.presenceState<PresenceState>()
         const typingUsers = Object.values(state).filter(
-          (presence: any) => presence[0]?.isTyping && presence[0]?.userId !== currentUser.id
+          (presence) => presence[0]?.isTyping && presence[0]?.userId !== currentUser.id
         )
         setIsTyping(typingUsers.length > 0)
         if (typingUsers.length > 0) {

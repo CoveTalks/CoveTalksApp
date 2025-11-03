@@ -19,6 +19,7 @@ interface Opportunity {
   topics: string[]
   status: string
   application_deadline: string
+  created_at: string
   organizations: {
     name: string
     logo_url: string

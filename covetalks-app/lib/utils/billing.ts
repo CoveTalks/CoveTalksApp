@@ -175,11 +175,15 @@ export function getFeaturesDifference(currentPlan: PlanType, targetPlan: PlanTyp
   gained: string[]
   lost: string[]
 } {
-  const currentFeatures = PLAN_FEATURES[currentPlan]
-  const targetFeatures = PLAN_FEATURES[targetPlan]
+  const currentFeatures = PLAN_FEATURES[currentPlan] || []
+  const targetFeatures = PLAN_FEATURES[targetPlan] || []
   
-  const gained = targetFeatures.filter(f => !currentFeatures.includes(f))
-  const lost = currentFeatures.filter(f => !targetFeatures.includes(f))
+  // Convert to string arrays to fix type issue
+  const currentFeaturesArray = [...currentFeatures] as string[]
+  const targetFeaturesArray = [...targetFeatures] as string[]
+  
+  const gained = targetFeaturesArray.filter(f => !currentFeaturesArray.includes(f))
+  const lost = currentFeaturesArray.filter(f => !targetFeaturesArray.includes(f))
   
   return { gained, lost }
 }

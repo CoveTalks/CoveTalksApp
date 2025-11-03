@@ -5,7 +5,7 @@ import Stripe from 'stripe'
 
 // Use compatible API version (2023-10-16 is stable and widely supported)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-09-30.clover',
 })
 
 // Price IDs from your Stripe dashboard
@@ -26,7 +26,7 @@ const PRICE_IDS = {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
