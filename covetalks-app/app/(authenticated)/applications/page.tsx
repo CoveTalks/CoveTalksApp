@@ -46,7 +46,7 @@ export default function ApplicationsPage() {
   if (loading) {
     return (
       <>
-        <DashboardHeader />
+        <DashboardHeader title="Applications"/>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="animate-spin h-12 w-12 mx-auto text-calm mb-4" />
@@ -59,7 +59,7 @@ export default function ApplicationsPage() {
 
   return (
     <>
-      <DashboardHeader />
+      <DashboardHeader title="Applications"/>
       {memberType === 'Speaker' ? (
         <SpeakerApplicationsView />
       ) : memberType === 'Organization' ? (
