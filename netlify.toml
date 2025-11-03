@@ -1,13 +1,8 @@
 # Netlify Configuration for CoveTalksApp
 
 [build]
-  # Base directory - where your Next.js app lives
   base = "covetalks-app"
-  
-  # Build command - explicitly use webpack
   command = "next build --webpack"
-  
-  # Publish directory - required when not using standalone mode
   publish = ".next"
 
 [build.environment]
@@ -16,9 +11,27 @@
   NPM_FLAGS = "--legacy-peer-deps"
   NODE_ENV = "production"
 
-# Essential Netlify plugin for Next.js
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# ====================================
+# REDIRECTS - ORDER MATTERS!
+# ====================================
+
+# API routes must come FIRST and NOT redirect to functions
+# The Next.js handler will handle them
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/___netlify-server-handler"
+  status = 200
+  force = false
+
+# Catch-all for Next.js pages
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  conditions = { }
 
 # ====================================
 # SECURITY HEADERS
@@ -59,15 +72,6 @@
     Cache-Control = "public, max-age=31536000, immutable"
 
 # ====================================
-# REDIRECTS
-# ====================================
-
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
-# ====================================
 # FUNCTIONS CONFIGURATION
 # ====================================
 
@@ -92,7 +96,7 @@
     NODE_ENV = "development"
 
 # ====================================
-# LOCAL DEVELOPMENT (Netlify Dev)
+# LOCAL DEVELOPMENT
 # ====================================
 
 [dev]
