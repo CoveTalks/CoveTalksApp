@@ -4,9 +4,8 @@ const nextConfig = {
   // NETLIFY DEPLOYMENT CONFIGURATION
   // ========================================
   
-  // Essential for Netlify deployment with Next.js
-  // This creates a standalone build that Netlify can serve efficiently
-  output: 'standalone',
+  // REMOVED: output: 'standalone' causes issues with Netlify + Next.js 16
+  // Netlify plugin handles deployment without this setting
   
   // ========================================
   // DEVELOPMENT & PERFORMANCE

@@ -7,9 +7,8 @@
   # Build command
   command = "npm run build"
   
-  # CRITICAL FIX: Don't specify publish directory for Next.js with @netlify/plugin-nextjs
-  # The plugin handles this automatically
-  # publish = ".next"  # REMOVE THIS LINE
+  # Publish directory - required when not using standalone mode
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20.11.0"
@@ -68,8 +67,6 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
-# Note: Removed the admin redirect as it may interfere with routing
-
 # ====================================
 # FUNCTIONS CONFIGURATION
 # ====================================
@@ -93,3 +90,14 @@
 [context.branch-deploy]
   [context.branch-deploy.environment]
     NODE_ENV = "development"
+
+# ====================================
+# LOCAL DEVELOPMENT (Netlify Dev)
+# ====================================
+
+[dev]
+  command = "npm run dev"
+  port = 3001
+  targetPort = 3001
+  autoLaunch = true
+  framework = "#custom"
