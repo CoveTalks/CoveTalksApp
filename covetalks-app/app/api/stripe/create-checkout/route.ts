@@ -8,7 +8,7 @@ export const runtime = 'nodejs'
 
 // Use compatible API version (2023-10-16 is stable and widely supported)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-09-30.clover',
+  apiVersion: '2024-11-20.acacia',
 })
 
 // Price IDs from your Stripe dashboard

@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-09-30.clover',
+  apiVersion: '2024-11-20.acacia',
 })
 
 const PRICE_IDS = {
