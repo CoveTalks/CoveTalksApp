@@ -1,4 +1,4 @@
-// app/api/stripe/cancel-subscription/route.ts
+// app/api/stripe/reactivate-subscription/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Stripe from 'stripe'
@@ -18,17 +18,17 @@ export async function POST(request: NextRequest) {
 
     const { subscriptionId } = await request.json()
 
-    // Cancel the subscription at period end
+    // Reactivate the subscription
     const subscription = await stripe.subscriptions.update(subscriptionId, {
-      cancel_at_period_end: true,
+      cancel_at_period_end: false,
     })
 
     // Update database
     await supabase
       .from('subscriptions')
       .update({
-        cancel_at_period_end: true,
-        cancelled_at: new Date().toISOString(),
+        cancel_at_period_end: false,
+        cancelled_at: null,
         updated_at: new Date().toISOString(),
       })
       .eq('stripe_subscription_id', subscriptionId)
@@ -36,9 +36,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, subscription })
   } catch (error) {
-    console.error('Cancel subscription error:', error)
+    console.error('Reactivate subscription error:', error)
     return NextResponse.json(
-      { error: 'Failed to cancel subscription' },
+      { error: 'Failed to reactivate subscription' },
       { status: 500 }
     )
   }
