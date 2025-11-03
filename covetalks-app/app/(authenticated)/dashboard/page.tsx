@@ -96,19 +96,19 @@ export default async function DashboardPage() {
             <>
               <StatCard
                 title="Available Opportunities"
-                value={stats.opportunities}
+                value={stats.opportunities ?? 0}
                 icon={Briefcase}
                 color="blue"
               />
               <StatCard
                 title="My Applications"
-                value={stats.applications}
+                value={stats.applications ?? 0}
                 icon={FileText}
                 color="green"
               />
               <StatCard
                 title="Unread Messages"
-                value={stats.messages}
+                value={stats.messages ?? 0}
                 icon={MessageSquare}
                 color="purple"
               />
@@ -123,25 +123,25 @@ export default async function DashboardPage() {
             <>
               <StatCard
                 title="Active Opportunities"
-                value={stats.opportunities}
+                value={stats.opportunities ?? 0} 
                 icon={Briefcase}
                 color="blue"
               />
               <StatCard
                 title="Total Applications"
-                value={stats.applications}
+                value={stats.applications ?? 0}
                 icon={Users}
                 color="green"
               />
               <StatCard
                 title="Unread Messages"
-                value={stats.messages}
+                value={stats.messages ?? 0}
                 icon={MessageSquare}
                 color="purple"
               />
               <StatCard
                 title="Upcoming Events"
-                value={stats.events}
+                value={stats.events ?? 0}
                 icon={Calendar}
                 color="amber"
               />
