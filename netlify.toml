@@ -1,0 +1,136 @@
+# Netlify Configuration for CoveTalksApp
+# Place this file in the root of your covetalks-app repository
+
+[build]
+  # Build command - runs your Next.js build
+  command = "npm run build"
+  
+  # Publish directory - where Next.js outputs build files
+  publish = ".next"
+  
+  # Base directory (if your app is in a subdirectory, otherwise leave empty)
+  # base = ""
+
+[build.environment]
+  # Node version - matches your development environment
+  NODE_VERSION = "18.17.0"
+  
+  # Disable Next.js telemetry for faster builds
+  NEXT_TELEMETRY_DISABLED = "1"
+  
+  # Enable proper build caching
+  NPM_FLAGS = "--legacy-peer-deps"
+
+# Essential Netlify plugin for Next.js
+# This handles server-side rendering, API routes, and more
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Redirect rules for proper SPA routing
+# These ensure Next.js routing works correctly
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
+  conditions = {Role = ["admin"]}
+
+# API routes should not be redirected
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Security headers for all pages
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Prevent clickjacking
+    X-Frame-Options = "DENY"
+    
+    # Prevent MIME type sniffing
+    X-Content-Type-Options = "nosniff"
+    
+    # Enable XSS protection
+    X-XSS-Protection = "1; mode=block"
+    
+    # Control referrer information
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    
+    # Feature policy (restrict access to browser features)
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    
+    # Strict Transport Security (HTTPS only)
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+
+# Special cache control for API routes
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    # Never cache API responses
+    Cache-Control = "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+    
+    # CORS headers (adjust as needed)
+    Access-Control-Allow-Origin = "https://covetalks.com"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+
+# Cache static assets aggressively
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Cache images
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Cache fonts
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Context-specific builds (optional)
+# Use these to have different builds for production vs staging
+
+# Production context
+[context.production]
+  environment = { NODE_ENV = "production" }
+
+# Deploy Preview context (PRs)
+[context.deploy-preview]
+  environment = { NODE_ENV = "development" }
+
+# Branch deploy context (for testing branches)
+[context.branch-deploy]
+  environment = { NODE_ENV = "development" }
+
+# Functions configuration (if using Netlify Functions)
+[functions]
+  # Directory for Netlify Functions (if you add any custom ones)
+  directory = "netlify/functions"
+  
+  # Increase timeout for long-running functions
+  # Default is 10 seconds, max is 26 seconds on free tier
+  # Max is 60 seconds on pro tier
+  node_bundler = "esbuild"
+
+# Development settings for Netlify Dev (local development)
+[dev]
+  # Command to run locally with Netlify Dev
+  command = "npm run dev"
+  
+  # Port for local development
+  port = 3001
+  
+  # Port for Netlify Dev proxy
+  targetPort = 3001
+  
+  # Auto-open browser
+  autoLaunch = true
+  
+  # Framework detection
+  framework = "#custom"
