@@ -13,7 +13,7 @@
 
 [build.environment]
   # Node version - matches your development environment
-  NODE_VERSION = "18.17.0"
+  NODE_VERSION = "22.18.0"
   
   # Disable Next.js telemetry for faster builds
   NEXT_TELEMETRY_DISABLED = "1"
