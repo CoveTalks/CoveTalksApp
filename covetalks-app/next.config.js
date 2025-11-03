@@ -18,25 +18,12 @@ const nextConfig = {
   // Remove X-Powered-By header for security
   poweredByHeader: false,
   
-  // Disable Next.js telemetry
-  // (Already set in netlify.toml, but good to have here too)
-  telemetry: {
-    enabled: false,
-  },
-  
   // ========================================
   // IMAGE OPTIMIZATION
   // ========================================
   
   images: {
-    // Domains allowed for next/image optimization
-    domains: [
-      'localhost',
-      'app.covetalks.com',
-      'covetalks.com',
-    ],
-    
-    // Remote patterns for external images (like Supabase Storage)
+    // Remote patterns for external images (Next.js 16+ only supports remotePatterns)
     remotePatterns: [
       {
         protocol: 'https',
@@ -47,6 +34,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com', // Google profile images
       },
+      {
+        protocol: 'https',
+        hostname: 'app.covetalks.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'covetalks.com',
+      },
     ],
     
     // Modern image formats for better performance
@@ -55,9 +50,6 @@ const nextConfig = {
     // Image optimization settings
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    
-    // Optional: uncomment if you have issues with image optimization on Netlify
-    // unoptimized: false,
   },
   
   // ========================================
@@ -83,6 +75,14 @@ const nextConfig = {
   },
   
   // ========================================
+  // TURBOPACK CONFIGURATION (Next.js 16+)
+  // ========================================
+  
+  // Empty turbopack config to silence warnings and use defaults
+  // Next.js 16 uses Turbopack by default, no additional config needed
+  turbopack: {},
+  
+  // ========================================
   // BUILD-TIME CHECKING
   // ========================================
   
@@ -93,15 +93,6 @@ const nextConfig = {
     
     // Use project tsconfig.json
     tsconfigPath: './tsconfig.json',
-  },
-  
-  // ESLint configuration
-  eslint: {
-    // Fail build on ESLint errors (recommended for production)
-    ignoreDuringBuilds: false,
-    
-    // Directories to lint during build
-    dirs: ['app', 'components', 'lib'],
   },
   
   // ========================================
@@ -197,56 +188,12 @@ const nextConfig = {
   // PRODUCTION OPTIMIZATIONS
   // ========================================
   
-  // Compiler optimizations
+  // Compiler optimizations (compatible with Turbopack)
   compiler: {
     // Remove console.log in production (keep errors and warnings)
     removeConsole: process.env.NODE_ENV === 'production' ? {
       exclude: ['error', 'warn', 'info'],
     } : false,
-    
-    // Enable React compiler optimizations
-    reactRemoveProperties: process.env.NODE_ENV === 'production' ? {
-      properties: ['^data-testid$'],
-    } : false,
-  },
-  
-  // ========================================
-  // WEBPACK CONFIGURATION (Advanced)
-  // ========================================
-  
-  webpack: (config, { isServer, dev }) => {
-    // Production optimizations
-    if (!dev && !isServer) {
-      // Minimize bundle size
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            default: false,
-            vendors: false,
-            // Vendor chunk
-            vendor: {
-              name: 'vendor',
-              chunks: 'all',
-              test: /node_modules/,
-              priority: 20
-            },
-            // Common components chunk
-            common: {
-              name: 'common',
-              minChunks: 2,
-              chunks: 'all',
-              priority: 10,
-              reuseExistingChunk: true,
-              enforce: true
-            }
-          }
-        },
-      }
-    }
-    
-    return config
   },
   
   // ========================================
