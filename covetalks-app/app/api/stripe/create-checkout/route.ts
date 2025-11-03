@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Stripe from 'stripe'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 // Use compatible API version (2023-10-16 is stable and widely supported)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',
