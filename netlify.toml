@@ -4,8 +4,8 @@
   # Base directory - where your Next.js app lives
   base = "covetalks-app"
   
-  # Build command
-  command = "npm run build"
+  # Build command - explicitly use webpack
+  command = "next build --webpack"
   
   # Publish directory - required when not using standalone mode
   publish = ".next"
