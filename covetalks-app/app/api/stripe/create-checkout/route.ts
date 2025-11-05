@@ -15,15 +15,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const PRICE_IDS = {
   Standard: {
     Monthly: process.env.STRIPE_PRICE_STANDARD_MONTHLY!,
-    Yearly: process.env.STRIPE_PRICE_STANDARD_YEARLY!,
+    Yearly: process.env.STRIPE_PRICE_STANDARD_ANNUAL!,
   },
   Plus: {
     Monthly: process.env.STRIPE_PRICE_PLUS_MONTHLY!,
-    Yearly: process.env.STRIPE_PRICE_PLUS_YEARLY!,
+    Yearly: process.env.STRIPE_PRICE_PLUS_ANNUAL!,
   },
   Premium: {
     Monthly: process.env.STRIPE_PRICE_PREMIUM_MONTHLY!,
-    Yearly: process.env.STRIPE_PRICE_PREMIUM_YEARLY!,
+    Yearly: process.env.STRIPE_PRICE_PREMIUM_ANNUAL!,
   },
 }
 
