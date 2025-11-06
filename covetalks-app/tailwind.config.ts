@@ -6,16 +6,36 @@ const config: Config = {
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  safelist: [
+    'lg:hidden',
+    'lg:flex',
+    'lg:block',
+    'lg:ml-64',
+    'lg:ml-20',
+    'ml-0',
+    'lg:w-64',
+    'lg:w-20',
+    'w-full',
+    'z-40',
+    'z-50',
+    'z-[60]',
+    'z-[70]',
+    'sticky',
+    'fixed',
+    '-translate-x-full',
+    'translate-x-0',
+    'lg:translate-x-0',
+    'hidden',
+    'flex',
+    'block',
+  ],
   theme: {
     extend: {
       colors: {
-        // CoveTalks Brand Colors (matching marketing site)
         deep: '#063A54',
         calm: '#00758F',
         sand: '#E2AD79',
         foam: '#E8F0F4',
-        
-        // Semantic colors
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -62,4 +82,5 @@ const config: Config = {
   },
   plugins: [],
 }
+
 export default config
