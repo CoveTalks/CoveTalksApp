@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { redirect } from 'next/navigation'
 import { Menu } from 'lucide-react'
 import Sidebar from '@/components/layout/Sidebar'
 import { cn } from '@/lib/utils'
@@ -35,19 +34,21 @@ export default function DashboardLayoutClient({
       />
 
       {/* Main Content Area */}
-      <div className="flex flex-col flex-1 w-full lg:w-auto">
+      <div className="flex flex-col flex-1 w-full">
         {/* Mobile Header with Hamburger */}
-        <header className="lg:hidden sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+        <header className="lg:hidden sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors touch-manipulation"
+            aria-label="Open menu"
           >
             <Menu className="h-6 w-6 text-gray-600" />
-            <span className="sr-only">Open menu</span>
           </button>
           <div className="flex items-center">
-            <span className="text-sm font-medium text-gray-700">CoveTalks</span>
+            <span className="text-lg font-semibold text-deep">CoveTalks</span>
           </div>
+          {/* Empty div for spacing */}
+          <div className="w-10"></div>
         </header>
 
         {/* Main Content with Responsive Margin */}

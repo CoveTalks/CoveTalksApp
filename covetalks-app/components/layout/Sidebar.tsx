@@ -91,20 +91,33 @@ export default function Sidebar({
     onMobileMenuClose()
   }, [pathname, onMobileMenuClose])
 
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [mobileMenuOpen])
+
   return (
     <>
-      {/* Mobile Overlay */}
+      {/* Mobile Overlay - FIXED z-index */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-[60] lg:hidden"
           onClick={onMobileMenuClose}
+          aria-hidden="true"
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - FIXED z-index to be above overlay */}
       <aside
         className={cn(
-          'fixed top-0 left-0 z-50 h-screen bg-white border-r border-gray-200 transition-all duration-300 flex flex-col',
+          'fixed top-0 left-0 z-[70] h-screen bg-white border-r border-gray-200 transition-all duration-300 flex flex-col',
           // Mobile: slide in/out from left
           'lg:translate-x-0',
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full',
@@ -137,6 +150,7 @@ export default function Sidebar({
             <button
               onClick={() => onCollapsedChange(!collapsed)}
               className="hidden lg:flex p-2 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {collapsed ? (
                 <ChevronRight className="h-5 w-5 text-gray-600" />
@@ -149,6 +163,7 @@ export default function Sidebar({
             <button
               onClick={onMobileMenuClose}
               className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+              aria-label="Close menu"
             >
               <X className="h-5 w-5 text-gray-600" />
             </button>
